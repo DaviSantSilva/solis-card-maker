@@ -24,15 +24,19 @@ export function CardFrame({ accent, accentSoft }: CardFrameProps) {
       className="absolute inset-0 h-full w-full"
       xmlns="http://www.w3.org/2000/svg"
     >
-      {/* ===== fundo dos painéis (atrás das linhas) ===== */}
-      <rect x={8} y={8} width={848} height={1218} rx={26} fill={panel} />
+      {/*
+        NÃO colocar rect fill cobrindo o card inteiro aqui.
+        O fundo geral vem do CSS do CardCanvas (inner div background).
+        Qualquer fill sólido do SVG na área da arte (x:154-829, y:166-852)
+        fica na frente da <img> e esconde a imagem — o SVG vem depois
+        no DOM então tem z-index implícito maior.
+      */}
 
       {/* coluna esquerda - fundo */}
       <rect x={28} y={34} width={122} height={819} fill={panelDark} />
       {/* cabeçalho - fundo */}
       <rect x={154} y={34} width={675} height={131} fill={panelDark} />
-      {/* área de arte (fundo neutro, a arte real cobre isso) */}
-      <rect x={154} y={166} width={675} height={686} fill="#e7e7e8" />
+      {/* área da arte: sem fill — a <img> abaixo mostra aqui */}
       {/* caixa de habilidade - fundo */}
       <rect x={36} y={853} width={793} height={199} fill={panelDark} />
       {/* rodapé - fundo */}

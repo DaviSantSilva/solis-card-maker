@@ -16,8 +16,7 @@ export const SAMPLE_OPERARIO: SolisCard = {
   abilityText: "Gere 1 Trabalho",
   flavorText: "Milhões de quilômetros de estruturas orbitais não se constroem sozinhos.",
   rarity: "comum",
-  emblemIcon: "emblema-asas",
-  expansionLabel: "Inicial",
+  companyId: "solis",
 };
 
 export const SAMPLE_INVESTIDOR: SolisCard = {
@@ -35,6 +34,5 @@ export const SAMPLE_INVESTIDOR: SolisCard = {
   abilityText: "Receba 1 Crédito",
   flavorText: "O dinheiro já não move montanhas. Move sistemas estelares inteiros.",
   rarity: "comum",
-  emblemIcon: "emblema-urna",
-  expansionLabel: "Inicial",
+  companyId: "corp-a",
 };
