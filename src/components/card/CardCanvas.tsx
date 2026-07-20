@@ -1,4 +1,5 @@
 "use client";
+import { forwardRef } from "react";
 import { SolisCard } from "@/lib/cards/types";
 import { CARD_TYPE_THEME, RARITY_LABEL } from "@/lib/cards/theme";
 import { CardFrame } from "./CardFrame";
@@ -17,7 +18,15 @@ function abs(z: { x: number; y: number; w: number; h: number }) {
  * Renderiza no tamanho nativo (864×1234 px) e escala via transform:scale.
  * Qualquer width prop funciona sem recalcular nada.
  */
-export function CardCanvas({ card, width = 320 }: { card: SolisCard; width?: number }) {
+/**
+ * `ref` aponta para o div externo (wrapper).
+ * O ExportPanel usa esse ref para capturar o inner div (864×1234) em tamanho
+ * nativo, removendo temporariamente o transform:scale durante a captura.
+ */
+export const CardCanvas = forwardRef<
+  HTMLDivElement,
+  { card: SolisCard; width?: number }
+>(function CardCanvas({ card, width = 320 }, ref) {
   const NATIVE_W = 864;
   const NATIVE_H = 1234;
   const scale = width / NATIVE_W;
@@ -27,7 +36,7 @@ export function CardCanvas({ card, width = 320 }: { card: SolisCard; width?: num
   const company = getCompany(card.companyId);
 
   return (
-    <div style={{
+    <div ref={ref} style={{
       position: "relative",
       width,
       height: Math.round(NATIVE_H * scale),
@@ -213,4 +222,4 @@ export function CardCanvas({ card, width = 320 }: { card: SolisCard; width?: num
       </div>
     </div>
   );
-}
+});
