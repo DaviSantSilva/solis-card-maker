@@ -155,7 +155,7 @@ export function ExportPanel({
 
       {/* dropdown */}
       {open && (
-        <div className="absolute bottom-full left-0 mb-2 w-56 rounded-lg border border-neutral-700 bg-neutral-900 py-1 shadow-xl shadow-black/40">
+        <div className="absolute bottom-full right-0 mb-2 w-56 rounded-lg border border-neutral-700 bg-neutral-900 py-1 shadow-xl shadow-black/40">
           {/* imagem */}
           <p className="px-3 pb-1 pt-2 text-[10px] font-semibold uppercase tracking-widest text-neutral-600">
             Imagem
