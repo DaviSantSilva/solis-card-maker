@@ -2,6 +2,11 @@
 import { create } from "zustand";
 import { SolisCard, IconKey, Rarity, ABILITY_TEXT_TEMPLATE } from "@/lib/cards/types";
 import { SAMPLE_OPERARIO, SAMPLE_INVESTIDOR } from "@/lib/cards/sample-data";
+import {
+  fetchAllCards,
+  saveCard as saveCardToDb,
+  deleteCard as deleteCardFromDb,
+} from "@/lib/supabase/cards.service";
 
 function makeId() {
   return `card-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
@@ -26,26 +31,33 @@ const BLANK_CARD: SolisCard = {
 
 interface EditorState {
   activeCard: SolisCard;
-  library: SolisCard[];
+  library:    SolisCard[];
+  isLoading:  boolean;
+  dbError:    string | null;
 
-  setField: <K extends keyof SolisCard>(key: K, value: SolisCard[K]) => void;
-  setTagIcon: (index: number, value: IconKey | null) => void;
-  setArtField: (field: "src" | "offsetX" | "offsetY" | "scale", value: string | number) => void;
-
-  /** Atualiza ícone/valor da habilidade e auto-preenche o texto se houver template */
-  setAbilityIcon: (icon: IconKey) => void;
+  // edição local (síncrona)
+  setField:        <K extends keyof SolisCard>(key: K, value: SolisCard[K]) => void;
+  setTagIcon:      (index: number, value: IconKey | null) => void;
+  setArtField:     (field: "src" | "offsetX" | "offsetY" | "scale", value: string | number) => void;
+  setAbilityIcon:  (icon: IconKey) => void;
   setAbilityValue: (value: number) => void;
+  newCard:         () => void;
+  loadCard:        (id: string) => void;
 
-  saveCard: () => void;
-  loadCard: (id: string) => void;
-  duplicateCard: (id: string) => void;
-  deleteCard: (id: string) => void;
-  newCard: () => void;
+  // operações com banco (assíncronas)
+  fetchLibrary:  () => Promise<void>;
+  saveCard:      (label?: string) => Promise<void>;
+  duplicateCard: (id: string) => Promise<void>;
+  deleteCard:    (id: string) => Promise<void>;
 }
 
 export const useEditorStore = create<EditorState>((set, get) => ({
   activeCard: { ...SAMPLE_OPERARIO },
-  library: [{ ...SAMPLE_OPERARIO }, { ...SAMPLE_INVESTIDOR }],
+  library:    [],          // começa vazio — populado pelo fetchLibrary
+  isLoading:  false,
+  dbError:    null,
+
+  // ── edição local ────────────────────────────────────────────
 
   setField: (key, value) =>
     set((s) => ({ activeCard: { ...s.activeCard, [key]: value } })),
@@ -80,14 +92,8 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       return { activeCard: { ...s.activeCard, abilityValue: value, abilityText } };
     }),
 
-  saveCard: () =>
-    set((s) => {
-      const exists = s.library.some((c) => c.id === s.activeCard.id);
-      if (exists) {
-        return { library: s.library.map((c) => c.id === s.activeCard.id ? { ...s.activeCard } : c) };
-      }
-      return { library: [...s.library, { ...s.activeCard }] };
-    }),
+  newCard: () =>
+    set(() => ({ activeCard: { ...BLANK_CARD, id: makeId() } })),
 
   loadCard: (id) =>
     set((s) => {
@@ -95,23 +101,67 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       return card ? { activeCard: { ...card } } : s;
     }),
 
-  duplicateCard: (id) =>
-    set((s) => {
-      const card = s.library.find((c) => c.id === id);
-      if (!card) return s;
-      const copy = { ...card, id: makeId(), name: card.name + " (cópia)" };
-      return { library: [...s.library, copy], activeCard: { ...copy } };
-    }),
+  // ── operações com banco ──────────────────────────────────────
 
-  deleteCard: (id) =>
-    set((s) => {
-      const lib = s.library.filter((c) => c.id !== id);
-      const active = s.activeCard.id === id
-        ? (lib.length > 0 ? { ...lib[0] } : { ...BLANK_CARD, id: makeId() })
-        : s.activeCard;
-      return { library: lib, activeCard: active };
-    }),
+  fetchLibrary: async () => {
+    set({ isLoading: true, dbError: null });
+    try {
+      const cards = await fetchAllCards();
+      set({
+        library:    cards,
+        // se não há carta ativa ainda, carrega a primeira da biblioteca
+        activeCard: cards.length > 0 ? { ...cards[0] } : { ...BLANK_CARD, id: makeId() },
+        isLoading:  false,
+      });
+    } catch (e) {
+      set({ isLoading: false, dbError: (e as Error).message });
+    }
+  },
 
-  newCard: () =>
-    set(() => ({ activeCard: { ...BLANK_CARD, id: makeId() } })),
+  saveCard: async (label) => {
+    set({ isLoading: true, dbError: null });
+    try {
+      const saved = await saveCardToDb(get().activeCard, label);
+      // refaz a biblioteca para garantir consistência com o banco
+      const library = await fetchAllCards();
+      set({ activeCard: saved, library, isLoading: false });
+    } catch (e) {
+      set({ isLoading: false, dbError: (e as Error).message });
+    }
+  },
+
+  duplicateCard: async (id) => {
+    const card = get().library.find((c) => c.id === id);
+    if (!card) return;
+    set({ isLoading: true, dbError: null });
+    try {
+      const copy = { ...card, id: makeId(), name: `${card.name} (cópia)` };
+      const saved   = await saveCardToDb(copy, "Duplicada de " + card.name);
+      const library = await fetchAllCards();
+      set({ activeCard: saved, library, isLoading: false });
+    } catch (e) {
+      set({ isLoading: false, dbError: (e as Error).message });
+    }
+  },
+
+  deleteCard: async (id) => {
+    const card = get().library.find((c) => c.id === id);
+    if (!card) return;
+    set({ isLoading: true, dbError: null });
+    try {
+      // slug derivado do nome (mesma lógica do service)
+      const slug = card.name
+        .toLowerCase()
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .replace(/\s+/g, "-")
+        .replace(/[^a-z0-9-]/g, "");
+      await deleteCardFromDb(slug);
+      const library = await fetchAllCards();
+      const active  = library.length > 0 ? { ...library[0] } : { ...BLANK_CARD, id: makeId() };
+      set({ library, activeCard: active, isLoading: false });
+    } catch (e) {
+      set({ isLoading: false, dbError: (e as Error).message });
+    }
+  },
 }));

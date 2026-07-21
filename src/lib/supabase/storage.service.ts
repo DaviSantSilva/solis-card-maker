@@ -1,4 +1,4 @@
-import { supabase, storageUrl } from "./client";
+import { getSupabase, storageUrl } from "./client";
 
 const BUCKET = "cards";
 
@@ -29,7 +29,7 @@ export async function uploadCardImage(
   const { blob, ext } = dataUrlToBlob(dataUrl);
   const path = `${cardId}/v${version}.${ext}`;
 
-  const { error } = await supabase.storage
+  const { error } = await getSupabase().storage
     .from(BUCKET)
     .upload(path, blob, {
       contentType: blob.type,
@@ -55,7 +55,7 @@ export async function uploadManifest(manifest: object): Promise<string> {
   const json = JSON.stringify(manifest, null, 2);
   const blob = new Blob([json], { type: "application/json" });
 
-  const { error } = await supabase.storage
+  const { error } = await getSupabase().storage
     .from(BUCKET)
     .upload("manifest.json", blob, {
       contentType: "application/json",

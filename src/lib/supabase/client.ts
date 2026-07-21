@@ -1,24 +1,33 @@
-import { createClient } from "@supabase/supabase-js";
+import { createClient, SupabaseClient } from "@supabase/supabase-js";
 
-const url  = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const key  = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+let _client: SupabaseClient | null = null;
 
-if (!url || !key) {
-  throw new Error(
-    "Supabase não configurado.\n" +
-    "Copie .env.local.example para .env.local e preencha as variáveis:\n" +
-    "  NEXT_PUBLIC_SUPABASE_URL\n" +
-    "  NEXT_PUBLIC_SUPABASE_ANON_KEY\n" +
-    "Veja SETUP.md para instruções de criação do projeto."
-  );
+/**
+ * Retorna o cliente Supabase (singleton lazy).
+ * Inicializa na primeira chamada — não no import do módulo — para
+ * evitar erros de build quando as env vars ainda não estão disponíveis.
+ */
+export function getSupabase(): SupabaseClient {
+  if (_client) return _client;
+
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+  if (!url || !key) {
+    throw new Error(
+      "Supabase não configurado.\n" +
+      "Copie .env.local.example → .env.local e preencha as variáveis.\n" +
+      "Ver SETUP.md para instruções."
+    );
+  }
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  _client = createClient<any>(url, key);
+  return _client;
 }
 
-// Sem o generic Database por enquanto — substituir pelos tipos gerados
-// via `npx supabase gen types` após criar o projeto (ver SETUP.md).
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export const supabase = createClient<any>(url, key);
-
-/** URL pública do Storage para um path específico */
+/** URL pública do Storage para um path relativo ao bucket 'cards' */
 export function storageUrl(path: string): string {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL ?? "";
   return `${url}/storage/v1/object/public/cards/${path}`;
 }
