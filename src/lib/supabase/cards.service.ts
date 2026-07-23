@@ -18,20 +18,14 @@ function isDataUrl(src: string): boolean {
 
 function rowToCard(row: LatestCardVersionRow): SolisCard {
   const card = (row.data as unknown) as SolisCard;
-
   if (row.image_path) {
-    card.art = {
-      ...(card.art ?? {}),
-      src: getPublicImageUrl(row.image_path),
-    };
+    card.art = { ...(card.art ?? {}), src: getPublicImageUrl(row.image_path) };
   }
-
   return { ...card, id: row.id };
 }
 
 // ─── Leitura ────────────────────────────────────────────────
 
-/** Carrega a versão mais recente de todas as cartas via view. */
 export async function fetchAllCards(): Promise<SolisCard[]> {
   const { data, error } = await getSupabase()
     .from("latest_card_versions")
@@ -42,7 +36,6 @@ export async function fetchAllCards(): Promise<SolisCard[]> {
   return ((data ?? []) as LatestCardVersionRow[]).map(rowToCard);
 }
 
-/** Histórico de versões de uma carta pelo slug. */
 export async function fetchCardHistory(slug: string) {
   const { data: cardRows, error: cardError } = await getSupabase()
     .from("cards")
@@ -67,10 +60,12 @@ export async function fetchCardHistory(slug: string) {
 
 /**
  * Salva uma nova versão da carta.
- * - Upsert da entidade em `cards`
- * - Upload da imagem se for data URL
- * - Insert em `card_versions`
- * Retorna o SolisCard com a URL pública da imagem.
+ *
+ * Ordem das operações (mais resistente a falhas parciais):
+ * 1. Upsert em `cards`  — cria ou reutiliza a entidade
+ * 2. Conta versões      — determina o próximo número
+ * 3. Upload da imagem   — se falhar, para aqui sem poluir card_versions
+ * 4. Insert em `card_versions` — só executa se tudo antes deu certo
  */
 export async function saveCard(
   card: SolisCard,
@@ -79,7 +74,7 @@ export async function saveCard(
   const db   = getSupabase();
   const slug = toSlug(card.name);
 
-  // 1. Upsert da entidade
+  // 1. Upsert da entidade (idempotente via onConflict: slug)
   const { data: cardRows, error: cardError } = await db
     .from("cards")
     .upsert({ slug, name: card.name }, { onConflict: "slug" })
@@ -98,23 +93,28 @@ export async function saveCard(
 
   const version = (count ?? 0) + 1;
 
-  // 3. Upload da imagem
+  // 3. Upload da imagem (pode falhar — card_versions ainda não foi tocado)
   let imagePath: string | null = null;
   const artSrc = card.art?.src;
 
   if (artSrc && isDataUrl(artSrc)) {
+    // Lança erro aqui se o Storage não estiver configurado corretamente.
+    // Nesse caso, o cards.upsert já ocorreu mas card_versions NÃO é criado,
+    // o que é seguro — na próxima tentativa o upsert reutiliza o registro.
     imagePath = await uploadCardImage(cardRow.id, version, artSrc);
   } else if (artSrc) {
     const match = artSrc.match(/\/cards\/(.+)$/);
     imagePath = match ? match[1] : null;
   }
 
-  // 4. Serializa sem art.src
+  // 4. Serializa sem art.src e insere a versão
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const { id: _id, ...rest } = card;
-  const dataToStore = { ...rest, art: rest.art ? { ...rest.art, src: "" } : undefined };
+  const dataToStore = {
+    ...rest,
+    art: rest.art ? { ...rest.art, src: "" } : undefined,
+  };
 
-  // 5. Insert da versão
   const { data: versionRows, error: versionError } = await db
     .from("card_versions")
     .insert({
@@ -131,7 +131,6 @@ export async function saveCard(
   }
   const versionRow = (versionRows as Array<{ id: string }>)[0];
 
-  // 6. Retorna com URL pública
   return {
     ...card,
     id: versionRow.id,
@@ -141,7 +140,6 @@ export async function saveCard(
   };
 }
 
-/** Remove uma carta e todas as suas versões. */
 export async function deleteCard(slug: string): Promise<void> {
   const { error } = await getSupabase()
     .from("cards")
