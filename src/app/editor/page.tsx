@@ -5,6 +5,7 @@ import { CardCanvas } from "@/components/card/CardCanvas";
 import { EditorForm } from "@/components/editor/EditorForm";
 import { CardLibrary } from "@/components/editor/CardLibrary";
 import { ExportPanel } from "@/components/editor/ExportPanel";
+import { PublishPanel } from "@/components/editor/PublishPanel";
 import { CARD_TYPE_THEME, RARITY_LABEL } from "@/lib/cards/theme";
 
 export default function EditorPage() {
@@ -47,15 +48,18 @@ export default function EditorPage() {
         className="flex flex-1 flex-col items-center justify-between gap-4 overflow-hidden py-6 px-8"
       >
         {/* topbar */}
-        <div className="flex w-full items-center justify-between">
-          <a href="/" className="text-xs text-neutral-600 transition-colors hover:text-neutral-400">
+        <div className="flex w-full items-center justify-between gap-4">
+          <a href="/" className="text-xs text-neutral-600 transition-colors hover:text-neutral-400 shrink-0">
             ← Galeria
           </a>
-          <span className="text-[10px] font-bold uppercase tracking-widest text-neutral-600">
-            Preview ao vivo
-          </span>
+
+          {/* publicar — centro do topbar */}
+          <div className="flex flex-1 justify-center">
+            <PublishPanel />
+          </div>
+
           <span
-            className="rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-white"
+            className="rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-white shrink-0"
             style={{ background: theme.accent }}
           >
             {theme.label} · {RARITY_LABEL[activeCard.rarity]}
