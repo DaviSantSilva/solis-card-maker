@@ -2,9 +2,6 @@ import { getSupabase, storageUrl } from "./client";
 
 const BUCKET = "cards";
 
-/**
- * Converte um data URL (base64) em Blob para upload.
- */
 function dataUrlToBlob(dataUrl: string): { blob: Blob; ext: string } {
   const [header, data] = dataUrl.split(",");
   const mime = header.match(/:(.*?);/)?.[1] ?? "image/png";
@@ -15,12 +12,7 @@ function dataUrlToBlob(dataUrl: string): { blob: Blob; ext: string } {
   return { blob: new Blob([arr], { type: mime }), ext };
 }
 
-/**
- * Faz upload da imagem de uma carta para o Storage.
- * Retorna o path relativo armazenado em card_versions.image_path.
- *
- * Path: cards/{cardId}/v{version}.{ext}
- */
+/** Upload da arte bruta de uma carta (chamado pelo saveCard). */
 export async function uploadCardImage(
   cardId:  string,
   version: number,
@@ -31,36 +23,46 @@ export async function uploadCardImage(
 
   const { error } = await getSupabase().storage
     .from(BUCKET)
-    .upload(path, blob, {
-      contentType: blob.type,
-      upsert: true,
-    });
+    .upload(path, blob, { contentType: blob.type, upsert: true });
 
   if (error) throw new Error(`Erro ao fazer upload da imagem: ${error.message}`);
   return path;
 }
 
 /**
- * Retorna a URL pública de uma imagem pelo path armazenado no banco.
+ * Upload do render final de uma carta (chamado pelo publishCards).
+ * Path: renders/{slug}/v{pubVersion}.png — URL nova a cada publicação,
+ * assim o TTS não usa cache da versão anterior.
  */
+export async function uploadCardRender(
+  slug:       string,
+  pubVersion: number,
+  dataUrl:    string
+): Promise<string> {
+  const { blob, ext } = dataUrlToBlob(dataUrl);
+  const path = `renders/${slug}/v${pubVersion}.${ext}`;
+
+  const { error } = await getSupabase().storage
+    .from(BUCKET)
+    .upload(path, blob, { contentType: blob.type, upsert: true });
+
+  if (error) throw new Error(`Erro ao publicar render: ${error.message}`);
+  return path;
+}
+
 export function getPublicImageUrl(imagePath: string): string {
   return storageUrl(imagePath);
 }
 
-/**
- * Faz upload do manifest.json para o path fixo consumido pelo TTS.
- * Sobrescreve o arquivo anterior.
- */
+/** Upload do manifest.json para a URL fixa consumida pelo TTS. */
 export async function uploadManifest(manifest: object): Promise<string> {
-  const json = JSON.stringify(manifest, null, 2);
-  const blob = new Blob([json], { type: "application/json" });
+  const blob = new Blob([JSON.stringify(manifest, null, 2)], {
+    type: "application/json",
+  });
 
   const { error } = await getSupabase().storage
     .from(BUCKET)
-    .upload("manifest.json", blob, {
-      contentType: "application/json",
-      upsert: true,
-    });
+    .upload("manifest.json", blob, { contentType: "application/json", upsert: true });
 
   if (error) throw new Error(`Erro ao publicar manifest: ${error.message}`);
   return storageUrl("manifest.json");
