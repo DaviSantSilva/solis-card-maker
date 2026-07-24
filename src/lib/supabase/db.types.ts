@@ -52,11 +52,14 @@ export interface PublicationRow {
   notes:        string | null;
 }
 
-/** Estrutura do manifest.json publicado e consumido pelo TTS */
+/** Estrutura do manifest.json publicado e consumido pelo TTS e pela galeria */
 export interface PublicationManifest {
   version:      number;
   published_at: string;
-  cards: Record<string, string>; // { [slug]: imageUrl }
+  /** slug → URL da imagem renderizada (consumido pelo TTS) */
+  cards: Record<string, string>;
+  /** slug → nome real da carta (consumido pela galeria) */
+  names: Record<string, string>;
 }
 
 export interface PublicationCardRow {

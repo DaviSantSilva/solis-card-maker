@@ -173,10 +173,14 @@ export async function publishCards(
   }
 
   // 3. Manifest
+  const manifestNames: Record<string, string> = {};
+  cards.forEach((c) => { manifestNames[toSlug(c.name)] = c.name; });
+
   const manifest: PublicationManifest = {
     version:      pubVersion,
     published_at: new Date().toISOString(),
     cards:        manifestCards,
+    names:        manifestNames,
   };
 
   const manifestUrl = await uploadManifest(manifest);
