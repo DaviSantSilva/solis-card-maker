@@ -14,8 +14,13 @@ export default function Home() {
       </header>
 
       <a href="/editor"
-        className="mb-12 rounded-lg bg-blue-600 px-6 py-2.5 text-sm font-semibold text-white shadow hover:bg-blue-500 transition-colors">
+        className="mb-4 rounded-lg bg-blue-600 px-6 py-2.5 text-sm font-semibold text-white shadow hover:bg-blue-500 transition-colors">
         Abrir Editor →
+      </a>
+
+      <a href="/publicadas"
+        className="mb-12 text-xs text-neutral-600 hover:text-neutral-400 transition-colors">
+        Ver cartas publicadas
       </a>
 
       <div className="flex flex-wrap justify-center gap-14">
