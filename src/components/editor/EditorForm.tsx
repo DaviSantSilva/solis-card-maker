@@ -34,7 +34,7 @@ export function EditorForm() {
           className="flex-1 rounded-md border border-neutral-700 py-1.5 text-xs font-medium text-neutral-400 hover:border-neutral-500 hover:text-neutral-200 transition-colors">
           + Nova
         </button>
-        <button onClick={saveCard}
+        <button onClick={() => saveCard()}
           className="flex-1 rounded-md bg-blue-600 py-1.5 text-xs font-semibold text-white hover:bg-blue-500 transition-colors">
           Salvar
         </button>
