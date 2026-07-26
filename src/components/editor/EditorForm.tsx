@@ -5,7 +5,7 @@ import {
 } from "@/components/ui/fields";
 import { ArtDropzone } from "./ArtDropzone";
 import { IconPicker } from "./IconPicker";
-import { CARD_TYPE_THEME, RARITY_LABEL } from "@/lib/cards/theme";
+import { CARD_TYPE_THEME, RARITY_LABEL, PLAYER_COLORS } from "@/lib/cards/theme";
 import { COMPANIES } from "@/lib/cards/companies";
 import {
   CardType, IconKey, Rarity, AbilityCategory, ABILITY_CATEGORIES,
@@ -61,6 +61,29 @@ export function EditorForm() {
             />
           </FieldRow>
         </div>
+
+        {/* cor do jogador — só aparece em cartas iniciais */}
+        {activeCard.rarity === "inicial" && (
+          <FieldRow label="Cor do jogador">
+            <div className="flex gap-2">
+              {PLAYER_COLORS.map((p) => (
+                <button
+                  key={p.id}
+                  type="button"
+                  title={p.name}
+                  onClick={() => setField("playerColor", p.color)}
+                  className="h-8 w-8 rounded-md border-2 transition-transform hover:scale-110"
+                  style={{
+                    background: p.color,
+                    borderColor: activeCard.playerColor === p.color
+                      ? "white"
+                      : "transparent",
+                  }}
+                />
+              ))}
+            </div>
+          </FieldRow>
+        )}
 
         <FieldRow label="Nome">
           <TextInput value={activeCard.name} onChange={(v) => setField("name", v)} placeholder="Nome da carta" />

@@ -19,7 +19,7 @@ export type CardType =
 
 export type WorkerTier = "operario" | "supervisor" | "engenheiro" | "especialista";
 
-export type Rarity = "comum" | "incomum" | "rara" | "unica";
+export type Rarity = "comum" | "incomum" | "rara" | "unica" | "inicial";
 
 /**
  * Ícones fixos do jogo — NÃO são upload livre.
@@ -102,6 +102,14 @@ export interface SolisCard {
   flavorText?: string;
 
   rarity: Rarity;
+
+  /**
+   * Cor do jogador dono desta carta — só relevante quando rarity === "inicial".
+   * As 5 cores são as mesmas das corporações (um jogador por corporação).
+   * Quando definida, o swatch colorido no canto inferior esquerdo da carta
+   * exibe esta cor como indicador visual de pertencimento.
+   */
+  playerColor?: string;
 
   /**
    * ID da empresa dona da carta — define o logo no círculo do rodapé.
