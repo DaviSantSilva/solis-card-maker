@@ -112,6 +112,13 @@ export interface SolisCard {
   playerColor?: string;
 
   /**
+   * Slug do grupo de variantes ao qual esta carta pertence.
+   * Ex: "operario" agrupa as 5 variantes coloridas do Operário.
+   * Indefinido = carta sem variantes.
+   */
+  variantGroup?: string;
+
+  /**
    * ID da empresa dona da carta — define o logo no círculo do rodapé.
    * Ver src/lib/cards/companies.ts.
    */
