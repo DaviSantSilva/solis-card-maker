@@ -69,10 +69,11 @@ export async function fetchCardHistory(slug: string) {
  */
 export async function saveCard(
   card: SolisCard,
-  label?: string
+  label?: string,
+  customSlug?: string
 ): Promise<SolisCard> {
   const db   = getSupabase();
-  const slug = toSlug(card.name);
+  const slug = customSlug ?? toSlug(card.name);
 
   // 1. Upsert da entidade (idempotente via onConflict: slug)
   const { data: cardRows, error: cardError } = await db

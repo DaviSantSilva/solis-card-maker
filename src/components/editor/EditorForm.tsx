@@ -5,7 +5,7 @@ import {
 } from "@/components/ui/fields";
 import { ArtDropzone } from "./ArtDropzone";
 import { IconPicker } from "./IconPicker";
-import { CARD_TYPE_THEME, RARITY_LABEL } from "@/lib/cards/theme";
+import { CARD_TYPE_THEME, RARITY_LABEL, PLAYER_COLORS } from "@/lib/cards/theme";
 import { COMPANIES } from "@/lib/cards/companies";
 import {
   CardType, IconKey, Rarity, AbilityCategory, ABILITY_CATEGORIES,
@@ -23,7 +23,7 @@ const ABILITY_CATEGORY_OPTIONS: { value: AbilityCategory; label: string }[] =
 const COMPANY_OPTIONS = COMPANIES.map((c) => ({ value: c.id, label: c.name }));
 
 export function EditorForm() {
-  const { activeCard, setField, setTagIcon, setAbilityIcon, setAbilityValue, saveCard, newCard } =
+  const { activeCard, setField, setTagIcon, setAbilityIcon, setAbilityValue, saveCard, newCard, createVariants, syncVariants } =
     useEditorStore();
 
   return (
@@ -61,6 +61,59 @@ export function EditorForm() {
             />
           </FieldRow>
         </div>
+
+        {/* cor do jogador — só aparece em cartas iniciais */}
+        {activeCard.rarity === "inicial" && (
+          <FieldRow label="Cor do jogador">
+            <div className="flex gap-2">
+              {PLAYER_COLORS.map((p) => (
+                <button
+                  key={p.id}
+                  type="button"
+                  title={p.name}
+                  onClick={() => setField("playerColor", p.color)}
+                  className="h-8 w-8 rounded-md border-2 transition-transform hover:scale-110"
+                  style={{
+                    background: p.color,
+                    borderColor: activeCard.playerColor === p.color
+                      ? "white"
+                      : "transparent",
+                  }}
+                />
+              ))}
+            </div>
+          </FieldRow>
+        )}
+
+        {/* botões de variantes — só em cartas iniciais */}
+        {activeCard.rarity === "inicial" && (
+          <div className="flex flex-col gap-2 rounded-lg border border-neutral-800 bg-neutral-800/30 p-3">
+            <p className="text-[10px] font-semibold uppercase tracking-widest text-neutral-500">
+              Variantes por jogador
+            </p>
+            <p className="text-[10px] leading-snug text-neutral-600">
+              Cria ou sincroniza 5 variantes desta carta — uma por corporação/cor.
+            </p>
+            <button
+              type="button"
+              onClick={() => createVariants()}
+              className="rounded-md bg-emerald-700/80 py-1.5 text-xs font-semibold text-white hover:bg-emerald-600 transition-colors"
+            >
+              {activeCard.variantGroup
+                ? "↺ Sincronizar todas as variantes"
+                : "✦ Criar variantes para todos os jogadores"}
+            </button>
+            {activeCard.variantGroup && (
+              <button
+                type="button"
+                onClick={() => syncVariants()}
+                className="rounded-md border border-neutral-700 py-1.5 text-xs text-neutral-400 hover:border-neutral-500 hover:text-neutral-200 transition-colors"
+              >
+                ↺ Sincronizar só desta variante
+              </button>
+            )}
+          </div>
+        )}
 
         <FieldRow label="Nome">
           <TextInput value={activeCard.name} onChange={(v) => setField("name", v)} placeholder="Nome da carta" />

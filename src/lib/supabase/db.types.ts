@@ -53,6 +53,13 @@ export interface PublicationRow {
 }
 
 /** Estrutura do manifest.json publicado e consumido pelo TTS e pela galeria */
+/** Metadados de variante incluídos no manifest para uso na galeria */
+export interface VariantMeta {
+  variantGroup: string;
+  playerColor:  string;
+  companyId:    string;
+}
+
 export interface PublicationManifest {
   version:      number;
   published_at: string;
@@ -60,6 +67,8 @@ export interface PublicationManifest {
   cards: Record<string, string>;
   /** slug → nome real da carta (consumido pela galeria) */
   names: Record<string, string>;
+  /** slug → metadados de variante — só presente em cartas iniciais com variante */
+  variants: Record<string, VariantMeta>;
 }
 
 export interface PublicationCardRow {

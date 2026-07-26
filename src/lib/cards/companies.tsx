@@ -50,3 +50,12 @@ export const COMPANIES: Company[] = [
 export function getCompany(id: string): Company {
   return COMPANIES.find((c) => c.id === id) ?? COMPANIES[0];
 }
+
+/** Cor do jogador associada a cada corporação (usada no swatch das cartas iniciais) */
+export const COMPANY_PLAYER_COLOR: Record<string, string> = {
+  tabajara: "#FF0000",
+  zenite:   "#FFFFFE",
+  atomic:   "#1E5C00",
+  atto:     "#0073DC",
+  core:     "#6C1CB6",
+};

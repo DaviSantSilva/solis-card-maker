@@ -2,6 +2,7 @@
 import { create } from "zustand";
 import { SolisCard, IconKey, Rarity, ABILITY_TEXT_TEMPLATE } from "@/lib/cards/types";
 import { SAMPLE_OPERARIO, SAMPLE_INVESTIDOR } from "@/lib/cards/sample-data";
+import { COMPANIES, COMPANY_PLAYER_COLOR } from "@/lib/cards/companies";
 import {
   fetchAllCards,
   saveCard as saveCardToDb,
@@ -49,6 +50,19 @@ interface EditorState {
   saveCard:      (label?: string) => Promise<void>;
   duplicateCard: (id: string) => Promise<void>;
   deleteCard:    (id: string) => Promise<void>;
+
+  /**
+   * Cria 5 variantes da carta ativa — uma por corporação/jogador.
+   * Slug: {nomeBase}-{companyId} (ex: "operario-tabajara").
+   * Se variantes já existem (mesmo variantGroup), sincroniza-as.
+   */
+  createVariants: () => Promise<void>;
+
+  /**
+   * Propaga o conteúdo da carta ativa para todas as variantes do mesmo grupo,
+   * preservando companyId, playerColor e variantGroup de cada uma.
+   */
+  syncVariants: () => Promise<void>;
 }
 
 export const useEditorStore = create<EditorState>((set, get) => ({
@@ -160,6 +174,82 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       const library = await fetchAllCards();
       const active  = library.length > 0 ? { ...library[0] } : { ...BLANK_CARD, id: makeId() };
       set({ library, activeCard: active, isLoading: false });
+    } catch (e) {
+      set({ isLoading: false, dbError: (e as Error).message });
+    }
+  },
+
+  createVariants: async () => {
+    const base = get().activeCard;
+    const variantGroup = base.name
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .replace(/\s+/g, "-")
+      .replace(/[^a-z0-9-]/g, "");
+
+    set({ isLoading: true, dbError: null });
+    try {
+      // Variantes existentes no mesmo grupo
+      const existing = get().library.filter((c) => c.variantGroup === variantGroup);
+      const existingByCompany = Object.fromEntries(
+        existing.map((c) => [c.companyId, c])
+      );
+
+      for (const company of COMPANIES) {
+        const playerColor = COMPANY_PLAYER_COLOR[company.id];
+        const customSlug  = `${variantGroup}-${company.id}`;
+        const existing    = existingByCompany[company.id];
+
+        const variant: SolisCard = {
+          ...(existing ?? base),   // base para novas, existing para sincronizar
+          ...(!existing ? {} : {}), // preserva campos da existente se sincronizando
+          // campos que vêm sempre do base (exceto os de identidade da variante)
+          ...base,
+          id:           existing?.id ?? makeId(),
+          companyId:    company.id,
+          playerColor,
+          variantGroup,
+        };
+
+        await saveCardToDb(
+          variant,
+          existing ? `Sincronização — ${company.name}` : `Criação — ${company.name}`,
+          customSlug
+        );
+      }
+
+      const library = await fetchAllCards();
+      set({ library, isLoading: false });
+    } catch (e) {
+      set({ isLoading: false, dbError: (e as Error).message });
+    }
+  },
+
+  syncVariants: async () => {
+    const base = get().activeCard;
+    if (!base.variantGroup) return;
+
+    set({ isLoading: true, dbError: null });
+    try {
+      const variants = get().library.filter(
+        (c) => c.variantGroup === base.variantGroup
+      );
+
+      for (const variant of variants) {
+        const customSlug = `${base.variantGroup}-${variant.companyId}`;
+        const updated: SolisCard = {
+          ...base,
+          id:           variant.id,
+          companyId:    variant.companyId,
+          playerColor:  variant.playerColor,
+          variantGroup: variant.variantGroup,
+        };
+        await saveCardToDb(updated, `Sincronização — ${variant.companyId}`, customSlug);
+      }
+
+      const library = await fetchAllCards();
+      set({ library, isLoading: false });
     } catch (e) {
       set({ isLoading: false, dbError: (e as Error).message });
     }

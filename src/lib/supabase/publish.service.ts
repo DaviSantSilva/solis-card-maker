@@ -153,16 +153,17 @@ export async function publishCards(
 
   for (let i = 0; i < cards.length; i++) {
     const card = cards[i];
-    const slug = toSlug(card.name);
+    // Variantes: slug composto {variantGroup}-{companyId} p/ slugs únicos no manifest
+    const slug = card.variantGroup && card.companyId
+      ? `${card.variantGroup}-${card.companyId}`
+      : toSlug(card.name);
 
     onProgress({ total: cards.length, current: i + 1, card: card.name });
 
     if (lastVersionIds.has(card.id) && prevManifest?.cards[slug]) {
-      // Carta não mudou — reutiliza URL do manifest anterior
       manifestCards[slug] = prevManifest.cards[slug];
       unchanged++;
     } else {
-      // Carta nova ou alterada — renderiza e sobe
       const dataUrl    = await renderCard(card);
       const renderPath = await uploadCardRender(slug, pubVersion, dataUrl);
       manifestCards[slug] = getPublicImageUrl(renderPath);
@@ -173,14 +174,29 @@ export async function publishCards(
   }
 
   // 3. Manifest
-  const manifestNames: Record<string, string> = {};
-  cards.forEach((c) => { manifestNames[toSlug(c.name)] = c.name; });
+  const manifestNames:    Record<string, string>    = {};
+  const manifestVariants: Record<string, import("./db.types").VariantMeta> = {};
+
+  cards.forEach((c) => {
+    const s = c.variantGroup && c.companyId
+      ? `${c.variantGroup}-${c.companyId}`
+      : toSlug(c.name);
+    manifestNames[s] = c.name;
+    if (c.variantGroup && c.playerColor && c.companyId) {
+      manifestVariants[s] = {
+        variantGroup: c.variantGroup,
+        playerColor:  c.playerColor,
+        companyId:    c.companyId,
+      };
+    }
+  });
 
   const manifest: PublicationManifest = {
     version:      pubVersion,
     published_at: new Date().toISOString(),
     cards:        manifestCards,
     names:        manifestNames,
+    variants:     manifestVariants,
   };
 
   const manifestUrl = await uploadManifest(manifest);
