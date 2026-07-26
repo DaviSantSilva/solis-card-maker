@@ -156,21 +156,26 @@ export const CardCanvas = forwardRef<
         {/* ── Ícone de habilidade ── */}
         <div style={{
           ...abs(ZONES.abilityIconBox),
-          display: "flex", alignItems: "center", justifyContent: "center",
-          padding: 18, color: theme.accent,
+          position: "relative",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
         }}>
-          <div style={{ position: "relative", width: "100%", height: "100%" }}>
-            <GameIcon icon={card.abilityIcon} className="h-full w-full" />
-            {card.abilityValue !== undefined && (
-              <span style={{
-                position: "absolute", bottom: 2, right: 4,
-                fontSize: 26, fontWeight: 800, lineHeight: 1,
-                color: theme.accent,
-              }}>
-                {card.abilityValue}
-              </span>
-            )}
-          </div>
+          {/* ícone com tamanho fixo — não cobre o span do valor */}
+          <GameIcon
+            icon={card.abilityIcon}
+            style={{ width: 72, height: 72, color: "white", flexShrink: 0 }}
+          />
+          {/* valor no canto inferior direito, sempre branco */}
+          {card.abilityValue !== undefined && (
+            <span style={{
+              position: "absolute", bottom: 6, right: 8,
+              fontSize: 28, fontWeight: 800, lineHeight: 1,
+              color: "white",
+            }}>
+              {card.abilityValue}
+            </span>
+          )}
         </div>
 
         {/* ── Texto de habilidade ── */}
