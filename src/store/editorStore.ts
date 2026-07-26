@@ -18,7 +18,7 @@ const BLANK_CARD: SolisCard = {
   name: "Nova Carta",
   subtitle: "Subtítulo",
   cost: 1,
-  categoryIcon: "categoria-trabalho",
+  categoryIcon: "cat-producao",
   tagIcons: [null, null, null],
   abilityCategory: "Produção",
   abilityIcon: "trabalho",

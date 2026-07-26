@@ -32,9 +32,7 @@ export type IconKey =
   | "combustivel"
   | "nanoestrutura"
   | "materia-exotica"
-  | "categoria-trabalho"
-  | "categoria-credito"
-  // ícones de categoria de habilidade (mostrados junto ao rótulo na carta)
+  // ícones de categoria (disponíveis para caixa 2, tags e ícone de habilidade)
   | "cat-producao"
   | "cat-economia"
   | "cat-mercado"

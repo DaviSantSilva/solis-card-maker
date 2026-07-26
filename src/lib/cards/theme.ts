@@ -1,4 +1,4 @@
-import { CardType, Rarity, AbilityCategory, IconKey } from "./types";
+import { CardType, Rarity } from "./types";
 
 export const CARD_TYPE_THEME: Record<CardType, { label: string; accent: string; accentSoft: string }> = {
   trabalhador: { label: "Trabalhador", accent: "#E13B30", accentSoft: "#F3B3AD" },
@@ -17,11 +17,3 @@ export const RARITY_LABEL: Record<Rarity, string> = {
   unica:   "Única",
 };
 
-/** Mapeia cada categoria de habilidade ao seu ícone correspondente. */
-export const CATEGORY_ICON: Record<AbilityCategory, IconKey> = {
-  "Produção":       "cat-producao",
-  "Economia":       "cat-economia",
-  "Mercado":        "cat-mercado",
-  "Pesquisa":       "cat-pesquisa",
-  "Megaengenharia": "cat-megaengenharia",
-};

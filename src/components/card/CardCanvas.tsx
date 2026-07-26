@@ -1,7 +1,7 @@
 "use client";
 import { forwardRef } from "react";
 import { SolisCard } from "@/lib/cards/types";
-import { CARD_TYPE_THEME, RARITY_LABEL, CATEGORY_ICON } from "@/lib/cards/theme";
+import { CARD_TYPE_THEME, RARITY_LABEL } from "@/lib/cards/theme";
 import { CardFrame } from "./CardFrame";
 import { GameIcon } from "./icons/GameIcon";
 import { ZONES } from "./layout";
@@ -143,18 +143,13 @@ export const CardCanvas = forwardRef<
           {card.subtitle}
         </div>
 
-        {/* ── Rótulo categoria de habilidade (ícone + texto) ── */}
+        {/* ── Rótulo categoria de habilidade ── */}
         <div style={{
           ...abs(ZONES.abilityCategoryLabel),
-          display: "flex", alignItems: "flex-end", gap: 8,
+          display: "flex", alignItems: "flex-end",
           fontSize: 30, fontWeight: 600, color: "#222",
           paddingLeft: 12, marginTop: 10,
         }}>
-          <GameIcon
-            icon={CATEGORY_ICON[card.abilityCategory]}
-            className="shrink-0"
-            style={{ width: 28, height: 28, marginBottom: 2 } as React.CSSProperties}
-          />
           {card.abilityCategory}
         </div>
 
