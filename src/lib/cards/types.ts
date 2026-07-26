@@ -32,8 +32,12 @@ export type IconKey =
   | "combustivel"
   | "nanoestrutura"
   | "materia-exotica"
-  | "categoria-trabalho"
-  | "categoria-credito";
+  // ícones de categoria (disponíveis para caixa 2, tags e ícone de habilidade)
+  | "cat-producao"
+  | "cat-economia"
+  | "cat-mercado"
+  | "cat-pesquisa"
+  | "cat-megaengenharia";
 
 /**
  * Categorias de habilidade disponíveis como select no editor.
@@ -44,11 +48,6 @@ export const ABILITY_CATEGORIES = [
   "Mercado",
   "Pesquisa",
   "Megaengenharia",
-  "Operações",
-  "Finanças",
-  "Comércio",
-  "Pesquisa & Desenvolvimento",
-  "Infraestrutura",
 ] as const;
 
 export type AbilityCategory = typeof ABILITY_CATEGORIES[number];

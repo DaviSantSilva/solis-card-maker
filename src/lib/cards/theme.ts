@@ -16,3 +16,4 @@ export const RARITY_LABEL: Record<Rarity, string> = {
   rara:    "Rara",
   unica:   "Única",
 };
+

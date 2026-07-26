@@ -10,8 +10,11 @@ const ALL_ICONS: { key: IconKey; label: string }[] = [
   { key: "combustivel",         label: "Combustível" },
   { key: "nanoestrutura",       label: "Nanoest." },
   { key: "materia-exotica",     label: "Mat. Exótica" },
-  { key: "categoria-trabalho",  label: "Cat. Trabalho" },
-  { key: "categoria-credito",   label: "Cat. Crédito" },
+  { key: "cat-producao",        label: "Produção" },
+  { key: "cat-economia",        label: "Economia" },
+  { key: "cat-mercado",         label: "Mercado" },
+  { key: "cat-pesquisa",        label: "Pesquisa" },
+  { key: "cat-megaengenharia",  label: "Megaeng." },
 ];
 
 export function IconPicker({

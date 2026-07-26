@@ -7,7 +7,7 @@ export const SAMPLE_OPERARIO: SolisCard = {
   name: "Operário",
   subtitle: "Ativo Operacional",
   cost: "X",
-  categoryIcon: "categoria-trabalho",
+  categoryIcon: "cat-producao",
   tagIcons: [null, null, null],
   art: { src: "/sample-art/operario.png" },
   abilityCategory: "Produção",
@@ -16,7 +16,7 @@ export const SAMPLE_OPERARIO: SolisCard = {
   abilityText: "Gere 1 Trabalho",
   flavorText: "Milhões de quilômetros de estruturas orbitais não se constroem sozinhos.",
   rarity: "comum",
-  companyId: "solis",
+  companyId: "tabajara",
 };
 
 export const SAMPLE_INVESTIDOR: SolisCard = {
@@ -25,7 +25,7 @@ export const SAMPLE_INVESTIDOR: SolisCard = {
   name: "Investidor",
   subtitle: "Rentista Institucional",
   cost: "X",
-  categoryIcon: "categoria-credito",
+  categoryIcon: "cat-economia",
   tagIcons: [null, null, null],
   art: { src: "/sample-art/investidor.png" },
   abilityCategory: "Economia",
@@ -34,5 +34,5 @@ export const SAMPLE_INVESTIDOR: SolisCard = {
   abilityText: "Receba 1 Crédito",
   flavorText: "O dinheiro já não move montanhas. Move sistemas estelares inteiros.",
   rarity: "comum",
-  companyId: "corp-a",
+  companyId: "zenite",
 };
