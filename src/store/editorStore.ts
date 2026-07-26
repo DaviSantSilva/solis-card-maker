@@ -26,7 +26,7 @@ const BLANK_CARD: SolisCard = {
   abilityText: "Gere 1 Trabalho",
   flavorText: "",
   rarity: "comum",
-  companyId: "solis",
+  companyId: "tabajara",
 };
 
 interface EditorState {
