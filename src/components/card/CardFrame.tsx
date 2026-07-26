@@ -1,8 +1,11 @@
 type CardFrameProps = {
   accent: string;
   accentSoft: string;
+  /** Se true, exibe o swatch colorido no canto inferior esquerdo (apenas cartas iniciais) */
+  showSwatch?: boolean;
+  /** Cor do swatch — cor do jogador dono da carta */
+  swatchColor?: string;
 };
-
 /**
  * Moldura única em SVG, em coordenadas fixas (viewBox 864x1234) medidas a
  * partir do template de margens enviado por Davi. A "identidade visual" de
@@ -12,7 +15,7 @@ type CardFrameProps = {
  * Cores fixas do desenho (cinzas/pretos) ficam hardcoded aqui de propósito:
  * são a "base neutra" da moldura, igual nos dois exemplos de referência.
  */
-export function CardFrame({ accent, accentSoft }: CardFrameProps) {
+export function CardFrame({ accent, accentSoft, showSwatch, swatchColor }: CardFrameProps) {
   const ink = "#3a3d42"; // cor das linhas finas da moldura
   const panel = "#d9dadc"; // cinza claro de preenchimento dos painéis
   const panelDark = "#cfd0d2";
@@ -174,7 +177,10 @@ export function CardFrame({ accent, accentSoft }: CardFrameProps) {
         strokeWidth={2}
         opacity={0.6}
       />
-      <rect x={36} y={1175} width={31} height={24} fill={accent} />
+      {/* swatch de cor do jogador — só aparece em cartas iniciais */}
+      {showSwatch && (
+        <rect x={36} y={1175} width={31} height={24} fill={swatchColor ?? accent} />
+      )}
       <line x1={36} y1={1155} x2={829} y2={1155} stroke={ink} strokeWidth={2} />
       {[0, 1, 2, 3, 4].map((i) => (
         <line

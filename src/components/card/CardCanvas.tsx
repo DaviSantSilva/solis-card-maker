@@ -85,7 +85,12 @@ export const CardCanvas = forwardRef<
         </div>
 
         {/* ── Moldura SVG ── */}
-        <CardFrame accent={theme.accent} accentSoft={theme.accentSoft} />
+        <CardFrame
+          accent={theme.accent}
+          accentSoft={theme.accentSoft}
+          showSwatch={card.rarity === "inicial"}
+          swatchColor={card.playerColor}
+        />
 
         {/* ── Custo ── */}
         <div style={{
