@@ -200,18 +200,14 @@ export const CardCanvas = forwardRef<
           </div>
         )}
 
-        {/* ── Emblema da empresa (círculo no rodapé) ── */}
-        <div style={{
+        {/* ── Logo da empresa (ocupa o espaço do emblema, sem círculo) ── */}
+        <company.Icon style={{
           position: "absolute",
           left: ZONES.emblem.x - ZONES.emblem.r,
           top:  ZONES.emblem.y - ZONES.emblem.r,
           width:  ZONES.emblem.r * 2,
           height: ZONES.emblem.r * 2,
-          display: "flex", alignItems: "center", justifyContent: "center",
-          color: theme.accent,
-        }}>
-          <company.Icon className="h-[65%] w-[65%]" />
-        </div>
+        }} />
 
         {/* ── Faixa inferior: Tipo · Raridade (centralizado) ── */}
         <div style={{

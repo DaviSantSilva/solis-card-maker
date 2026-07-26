@@ -165,8 +165,6 @@ export function CardFrame({ accent, accentSoft }: CardFrameProps) {
         strokeWidth={2.5}
       />
       <line x1={567} y1={1052} x2={567} y2={1155} stroke={ink} strokeWidth={2} />
-      {/* círculo do emblema, colorido pelo tipo da carta */}
-      <circle cx={698} cy={1103} r={38} fill={accentSoft} stroke={accent} strokeWidth={3} />
 
       {/* ===== faixa inferior: aba colorida + rótulo de expansão + marcas ===== */}
       <path
