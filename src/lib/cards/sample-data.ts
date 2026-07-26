@@ -15,9 +15,8 @@ export const SAMPLE_OPERARIO: SolisCard = {
   abilityValue: 1,
   abilityText: "Gere 1 Trabalho",
   flavorText: "Milhões de quilômetros de estruturas orbitais não se constroem sozinhos.",
-  rarity: "inicial",
+  rarity: "comum",
   companyId: "tabajara",
-  playerColor: "#FF0000",
 };
 
 export const SAMPLE_INVESTIDOR: SolisCard = {
@@ -34,7 +33,6 @@ export const SAMPLE_INVESTIDOR: SolisCard = {
   abilityValue: 1,
   abilityText: "Receba 1 Crédito",
   flavorText: "O dinheiro já não move montanhas. Move sistemas estelares inteiros.",
-  rarity: "inicial",
+  rarity: "comum",
   companyId: "zenite",
-  playerColor: "#FFFFFE",
 };

@@ -15,17 +15,5 @@ export const RARITY_LABEL: Record<Rarity, string> = {
   incomum: "Incomum",
   rara:    "Rara",
   unica:   "Única",
-  inicial: "Inicial",
 };
 
-/**
- * Cores dos 5 jogadores — mesmas das corporações.
- * Usadas no swatch do canto inferior esquerdo das cartas iniciais.
- */
-export const PLAYER_COLORS: { id: string; name: string; color: string }[] = [
-  { id: "p1", name: "Vermelho", color: "#FF0000" }, // Tabajara Corporation
-  { id: "p2", name: "Branco",   color: "#FFFFFE" }, // Zenite Industries
-  { id: "p3", name: "Verde",    color: "#1E5C00" }, // Atomic Dynamics
-  { id: "p4", name: "Azul",     color: "#0073DC" }, // Atto Tech
-  { id: "p5", name: "Roxo",     color: "#6C1CB6" }, // Core Labs
-];
