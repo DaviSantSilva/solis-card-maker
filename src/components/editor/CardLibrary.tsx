@@ -200,7 +200,10 @@ function VariantStack({
 
           {/* ring quando uma variante está ativa */}
           {isGroupActive && (
-            <div className="absolute inset-0 rounded-[10px] ring-2 ring-blue-500 pointer-events-none" />
+            <div
+              className="absolute inset-0 pointer-events-none ring-2 ring-blue-500"
+              style={{ borderRadius: CARD_RADIUS_168 }}
+            />
           )}
 
           {/* dots de cor dos jogadores */}
@@ -236,6 +239,9 @@ function VariantStack({
   );
 }
 
+/* ── raio de borda exato do CardCanvas em width=168 ── */
+const CARD_RADIUS_168 = Math.round(26 * (168 / 864)); // 5px
+
 /* ── card individual ── */
 function CardItem({ card, isActive, onLoad, onDuplicate, onDelete }: {
   card: SolisCard; isActive: boolean;
@@ -243,17 +249,32 @@ function CardItem({ card, isActive, onLoad, onDuplicate, onDelete }: {
 }) {
   const theme = CARD_TYPE_THEME[card.cardType];
   return (
-    <div className={`group relative cursor-pointer rounded-lg transition-all ${
-      isActive ? "ring-2 ring-blue-500" : "hover:ring-1 hover:ring-neutral-600"
-    }`}>
+    <div className="group relative cursor-pointer">
       <div onClick={onLoad}><CardCanvas card={card} width={168} /></div>
+
+      {/* ring de seleção / hover — segue o border-radius exato da carta */}
+      {isActive ? (
+        <div
+          className="absolute inset-0 pointer-events-none ring-2 ring-blue-500"
+          style={{ borderRadius: CARD_RADIUS_168 }}
+        />
+      ) : (
+        <div
+          className="absolute inset-0 pointer-events-none ring-1 ring-neutral-600 opacity-0 transition-opacity group-hover:opacity-100"
+          style={{ borderRadius: CARD_RADIUS_168 }}
+        />
+      )}
+
       <span
         className="absolute left-1 top-1 rounded-sm px-1 py-0.5 text-[8px] font-bold uppercase tracking-wider text-white"
         style={{ background: theme.accent }}
       >
         {theme.label}
       </span>
-      <div className="absolute inset-0 flex flex-col items-center justify-end gap-1 rounded-lg bg-neutral-950/70 pb-2 opacity-0 transition-opacity group-hover:opacity-100">
+      <div
+        className="absolute inset-0 flex flex-col items-center justify-end gap-1 bg-neutral-950/70 pb-2 opacity-0 transition-opacity group-hover:opacity-100"
+        style={{ borderRadius: CARD_RADIUS_168 }}
+      >
         <button onClick={onLoad} className="rounded bg-blue-700 px-3 py-0.5 text-[10px] font-semibold text-white hover:bg-blue-600">Editar</button>
         <button onClick={onDuplicate} className="rounded bg-neutral-800 px-3 py-0.5 text-[10px] font-medium text-neutral-200 hover:bg-neutral-700">Duplicar</button>
         <button onClick={onDelete} className="rounded bg-red-900/60 px-3 py-0.5 text-[10px] font-medium text-red-300 hover:bg-red-800/60">Apagar</button>
