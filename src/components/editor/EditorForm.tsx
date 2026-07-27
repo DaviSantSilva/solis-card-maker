@@ -6,6 +6,7 @@ import { IconPicker } from "./IconPicker";
 import { CARD_TYPE_THEME, RARITY_LABEL, PLAYER_COLORS } from "@/lib/cards/theme";
 import { COMPANIES } from "@/lib/cards/companies";
 import { CardType, IconKey, Rarity, AbilityCategory, ABILITY_CATEGORIES } from "@/lib/cards/types";
+import { useConfirm } from "@/components/ui/ConfirmModal";
 
 const CARD_TYPE_OPTIONS = Object.entries(CARD_TYPE_THEME).map(([k, v]) => ({ value: k as CardType, label: v.label }));
 const RARITY_OPTIONS    = Object.entries(RARITY_LABEL).map(([k, v]) => ({ value: k as Rarity, label: v }));
@@ -15,13 +16,25 @@ const COMPANY_OPTIONS   = COMPANIES.map((c) => ({ value: c.id, label: c.name }))
 export function EditorForm() {
   const { activeCard, setField, setTagIcon, setAbilityIcon, setAbilityValue,
           saveCard, newCard, createVariants, syncVariants } = useEditorStore();
+  const { ask, modal } = useConfirm();
+
+  const handleNewCard = async () => {
+    const ok = await ask({
+      title:   "Criar nova carta?",
+      body:    "Alterações não salvas na carta atual serão descartadas.",
+      confirm: "Criar nova",
+    });
+    if (ok) newCard();
+  };
 
   return (
-    <div className="flex h-full flex-col">
+    <>
+      {modal}
+      <div className="flex h-full flex-col">
       {/* toolbar */}
       <div className="flex items-center gap-2 border-b px-4 py-3"
         style={{ borderColor: "var(--border)" }}>
-        <button onClick={newCard}
+        <button onClick={handleNewCard}
           className="flex-1 rounded-lg border py-2 text-xs font-medium transition-colors hover:border-neutral-500 hover:text-white"
           style={{ borderColor: "var(--border)", color: "var(--text-2)", background: "transparent" }}>
           + Nova
@@ -140,5 +153,6 @@ export function EditorForm() {
         </FieldRow>
       </div>
     </div>
+    </>
   );
 }

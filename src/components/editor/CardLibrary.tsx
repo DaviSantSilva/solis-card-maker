@@ -6,6 +6,7 @@ import { CARD_TYPE_THEME } from "@/lib/cards/theme";
 import { SolisCard } from "@/lib/cards/types";
 import { FilterBar } from "@/components/filter/FilterBar";
 import { FilterCriteria, EMPTY_FILTER, filterCards } from "@/lib/filter";
+import { useConfirm } from "@/components/ui/ConfirmModal";
 
 /* ── agrupamento ── */
 type LibraryItem =
@@ -121,7 +122,7 @@ function VariantModal({
                     ⊕
                   </button>
                   <button
-                    onClick={() => { if (confirm(`Apagar variante?`)) onDelete(card.id); }}
+                    onClick={() => onDelete(card.id)}
                     className="rounded-md border border-neutral-700 px-2 py-1 text-[10px] text-red-500/70 hover:text-red-400 transition-colors"
                     title="Apagar"
                   >
@@ -290,62 +291,98 @@ function CardItem({ card, isActive, onLoad, onDuplicate, onDelete }: {
 export function CardLibrary() {
   const { library, activeCard, loadCard, duplicateCard, deleteCard } = useEditorStore();
   const [filter, setFilter] = useState<FilterCriteria>(EMPTY_FILTER);
+  const { ask, modal }      = useConfirm();
 
-  const filtered    = filterCards(library, filter);
+  /* ── handlers com confirmação ── */
+  const handleLoad = async (card: SolisCard) => {
+    const ok = await ask({
+      title:   `Editar "${card.name}"?`,
+      body:    "Alterações não salvas na carta atual serão descartadas.",
+      confirm: "Carregar",
+    });
+    if (ok) loadCard(card.id);
+  };
 
-  // Sempre agrupa por variantGroup — o filtro só reduz quais cartas aparecem,
-  // não remove o comportamento de stack. Grupos com 1 carta após o filtro
-  // são rebaixados para carta individual.
+  const handleDuplicate = async (card: SolisCard) => {
+    const ok = await ask({
+      title:   `Duplicar "${card.name}"?`,
+      body:    "Uma cópia da carta será adicionada à biblioteca.",
+      confirm: "Duplicar",
+    });
+    if (ok) duplicateCard(card.id);
+  };
+
+  const handleDelete = async (card: SolisCard) => {
+    const ok = await ask({
+      title:   `Apagar "${card.name}"?`,
+      body:    "Esta ação é permanente e não pode ser desfeita.",
+      confirm: "Apagar",
+      variant: "danger",
+    });
+    if (ok) deleteCard(card.id);
+  };
+
+  const filtered = filterCards(library, filter);
   const rawItems = groupLibrary(filtered);
-  const items = rawItems.map((item) =>
+  const items    = rawItems.map((item) =>
     item.type === "group" && item.cards.length === 1
       ? { type: "single" as const, card: item.cards[0] }
       : item
   );
-
-  const groups  = items.filter((i) => i.type === "group").length;
+  const groups = items.filter((i) => i.type === "group").length;
 
   return (
-    <aside className="flex h-full w-64 shrink-0 flex-col border-l border-neutral-800 bg-neutral-900">
-      <div className="flex flex-col gap-3 border-b border-neutral-800 px-3 py-3">
-        <p className="text-[10px] font-bold uppercase tracking-widest text-neutral-500">
-          Biblioteca · {library.length}
-          {groups > 0 && (
-            <span className="ml-1 text-neutral-600">
-              ({groups} grupo{groups !== 1 ? "s" : ""})
-            </span>
-          )}
-        </p>
-        <FilterBar
-          filter={filter}
-          onChange={setFilter}
-          resultCount={filtered.length}
-          totalCount={library.length}
-        />
-      </div>
+    <>
+      {modal}
+      <aside className="flex h-full w-64 shrink-0 flex-col border-l border-neutral-800 bg-neutral-900">
+        <div className="flex flex-col gap-3 border-b border-neutral-800 px-3 py-3">
+          <p className="text-[10px] font-bold uppercase tracking-widest text-neutral-500">
+            Biblioteca · {library.length}
+            {groups > 0 && (
+              <span className="ml-1 text-neutral-600">
+                ({groups} grupo{groups !== 1 ? "s" : ""})
+              </span>
+            )}
+          </p>
+          <FilterBar
+            filter={filter}
+            onChange={setFilter}
+            resultCount={filtered.length}
+            totalCount={library.length}
+          />
+        </div>
 
-      <div className="flex flex-col gap-4 overflow-y-auto p-3">
-        {items.map((item) =>
-          item.type === "single" ? (
-            <CardItem
-              key={item.card.id}
-              card={item.card}
-              isActive={item.card.id === activeCard.id}
-              onLoad={() => loadCard(item.card.id)}
-              onDuplicate={() => duplicateCard(item.card.id)}
-              onDelete={() => { if (confirm(`Apagar "${item.card.name}"?`)) deleteCard(item.card.id); }}
-            />
-          ) : (
-            <VariantStack
-              key={item.variantGroup}
-              item={item}
-              activeCardId={activeCard.id}
-              onLoad={loadCard}
-              onDuplicate={duplicateCard}
-              onDelete={deleteCard}
-            />
-          )
-        )}
+        <div className="flex flex-col gap-4 overflow-y-auto p-3">
+          {items.map((item) =>
+            item.type === "single" ? (
+              <CardItem
+                key={item.card.id}
+                card={item.card}
+                isActive={item.card.id === activeCard.id}
+                onLoad={() => handleLoad(item.card)}
+                onDuplicate={() => handleDuplicate(item.card)}
+                onDelete={() => handleDelete(item.card)}
+              />
+            ) : (
+              <VariantStack
+                key={item.variantGroup}
+                item={item}
+                activeCardId={activeCard.id}
+                onLoad={(id) => {
+                  const card = item.cards.find((c) => c.id === id);
+                  if (card) handleLoad(card);
+                }}
+                onDuplicate={(id) => {
+                  const card = item.cards.find((c) => c.id === id);
+                  if (card) handleDuplicate(card);
+                }}
+                onDelete={(id) => {
+                  const card = item.cards.find((c) => c.id === id);
+                  if (card) handleDelete(card);
+                }}
+              />
+            )
+          )}
 
         {library.length === 0 && (
           <p className="pt-6 text-center text-[11px] text-neutral-600">Nenhuma carta salva</p>
@@ -355,5 +392,6 @@ export function CardLibrary() {
         )}
       </div>
     </aside>
+    </>
   );
 }
