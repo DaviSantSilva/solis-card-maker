@@ -20,7 +20,6 @@ interface GalleryFilter {
   rarities:  string[];
   companies: string[];
 }
-
 const EMPTY: GalleryFilter = { name: "", types: [], rarities: [], companies: [] };
 
 /* ── helpers ── */
@@ -35,18 +34,35 @@ function toggle<T>(arr: T[], v: T): T[] {
   return arr.includes(v) ? arr.filter((x) => x !== v) : [...arr, v];
 }
 
-function matchesFilter(slug: string, manifest: PublicationManifest, f: GalleryFilter): boolean {
+/**
+ * Retorna true se o slug passa pelo filtro.
+ * Se meta está ausente e há filtros de tipo/raridade/empresa ativos,
+ * a carta NÃO passa — o usuário precisa republicar para obter os metadados.
+ */
+function matchesFilter(
+  slug: string,
+  manifest: PublicationManifest,
+  f: GalleryFilter
+): boolean {
   const name = manifest.names?.[slug] ?? slug;
   const meta = manifest.meta?.[slug] as CardMeta | undefined;
 
+  // busca por nome — sempre disponível
   if (f.name) {
     const q = f.name.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
     const n = name.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
     if (!n.includes(q)) return false;
   }
-  if (f.types.length    && meta && !f.types.includes(meta.cardType))   return false;
-  if (f.rarities.length && meta && !f.rarities.includes(meta.rarity))  return false;
-  if (f.companies.length && meta && !f.companies.includes(meta.companyId)) return false;
+
+  // filtros que dependem de meta — sem meta, carta é excluída quando filtros estão ativos
+  const needsMeta = f.types.length > 0 || f.rarities.length > 0 || f.companies.length > 0;
+  if (needsMeta) {
+    if (!meta) return false; // meta ausente = carta publicada antes da feature de meta
+    if (f.types.length    && !f.types.includes(meta.cardType))   return false;
+    if (f.rarities.length && !f.rarities.includes(meta.rarity))  return false;
+    if (f.companies.length && !f.companies.includes(meta.companyId)) return false;
+  }
+
   return true;
 }
 
@@ -67,7 +83,7 @@ function Chip({ active, onClick, color, children }: {
   );
 }
 
-/* ── card tile ── */
+/* ── card tile (carta individual) ── */
 function CardTile({ slug, manifest }: { slug: string; manifest: PublicationManifest }) {
   const name    = manifest.names?.[slug] ?? slug;
   const url     = manifest.cards[slug];
@@ -80,7 +96,7 @@ function CardTile({ slug, manifest }: { slug: string; manifest: PublicationManif
         <img src={url} alt={name} className="h-full w-full object-cover" loading="lazy" />
         {variant?.playerColor && (
           <span className="absolute right-2 top-2 h-4 w-4 rounded-full border-2 border-neutral-900 shadow"
-            style={{ background: variant.playerColor }} title={variant.companyId} />
+            style={{ background: variant.playerColor }} />
         )}
       </div>
       <p className="text-center text-xs font-medium text-neutral-400">{name}</p>
@@ -88,42 +104,167 @@ function CardTile({ slug, manifest }: { slug: string; manifest: PublicationManif
   );
 }
 
-/* ── grupo de variantes ── */
-function VariantGroup({ groupKey, slugs, manifest }: {
+/* ── modal de variantes da galeria ── */
+function GalleryVariantModal({
+  groupKey, slugs, manifest, open, onClose,
+}: {
   groupKey: string; slugs: string[]; manifest: PublicationManifest;
+  open: boolean; onClose: () => void;
 }) {
-  const [open, setOpen] = useState(true);
-  const name   = manifest.names?.[slugs[0]] ?? groupKey;
-  const colors = slugs.map((s) => (manifest.variants?.[s] as VariantMeta | undefined)?.playerColor).filter(Boolean);
+  if (!open) return null;
+  const name = manifest.names?.[slugs[0]] ?? groupKey;
+
   return (
-    <div className="col-span-full flex flex-col gap-3 rounded-xl border border-neutral-800 bg-neutral-900/50 p-4">
-      <button type="button" onClick={() => setOpen((o) => !o)}
-        className="flex items-center justify-between text-left">
-        <div className="flex items-center gap-3">
-          <span className="text-sm font-semibold text-neutral-200">{name}</span>
-          <span className="text-xs text-neutral-600">{slugs.length} variantes</span>
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={onClose}>
+      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
+      <div
+        className="relative w-full max-w-xl overflow-hidden rounded-2xl border border-neutral-700 bg-neutral-900 shadow-2xl shadow-black/60"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between border-b border-neutral-800 px-5 py-4">
+          <div>
+            <p className="text-sm font-semibold text-neutral-100">{name}</p>
+            <p className="text-xs text-neutral-500">{slugs.length} variantes</p>
+          </div>
+          <button type="button" onClick={onClose}
+            className="flex h-7 w-7 items-center justify-center rounded-lg text-neutral-500 hover:bg-neutral-800 hover:text-neutral-300">
+            ✕
+          </button>
         </div>
-        <div className="flex items-center gap-2">
-          {colors.map((c, i) => (
-            <span key={i} className="h-4 w-4 rounded-full border border-neutral-700" style={{ background: c! }} />
-          ))}
-          <svg className={`ml-1 h-3 w-3 text-neutral-600 transition-transform ${open ? "rotate-180" : ""}`}
-            viewBox="0 0 10 6" fill="currentColor"><path d="M0 0l5 6 5-6z" /></svg>
+        <div className="grid grid-cols-2 gap-4 overflow-y-auto p-5 sm:grid-cols-3"
+          style={{ maxHeight: "70vh" }}>
+          {slugs.map((slug) => {
+            const variant = manifest.variants?.[slug] as VariantMeta | undefined;
+            return (
+              <div key={slug} className="flex flex-col gap-2">
+                <div className="relative overflow-hidden rounded-xl shadow-md"
+                  style={{ aspectRatio: "864 / 1234" }}>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={manifest.cards[slug]} alt={manifest.names?.[slug] ?? slug}
+                    className="h-full w-full object-cover" loading="lazy" />
+                  {variant?.playerColor && (
+                    <span className="absolute right-1.5 top-1.5 h-3.5 w-3.5 rounded-full border-2 border-neutral-900 shadow"
+                      style={{ background: variant.playerColor }} />
+                  )}
+                </div>
+                {variant?.companyId && (
+                  <p className="text-center text-[10px] capitalize text-neutral-600">
+                    {variant.companyId}
+                  </p>
+                )}
+              </div>
+            );
+          })}
         </div>
-      </button>
-      {open && (
-        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
-          {slugs.map((slug) => <CardTile key={slug} slug={slug} manifest={manifest} />)}
-        </div>
-      )}
+      </div>
     </div>
   );
 }
 
-/* ── página ── */
+/* ── stack de variantes da galeria ── */
+function GalleryVariantStack({
+  groupKey, slugs, manifest,
+}: {
+  groupKey: string; slugs: string[]; manifest: PublicationManifest;
+}) {
+  const [hovered, setHovered]     = useState(false);
+  const [modalOpen, setModalOpen] = useState(false);
+
+  const front  = slugs[0];
+  const others = slugs.slice(1, 3); // até 2 camadas traseiras
+  const colors = slugs
+    .map((s) => (manifest.variants?.[s] as VariantMeta | undefined)?.playerColor)
+    .filter(Boolean) as string[];
+
+  const restOffset  = [{ x: -4, y: 4, r: -1.2 }, { x: -8, y: 8, r: -2.4 }];
+  const hoverOffset = [{ x: -14, y: 10, r: -6  }, { x: -26, y: 16, r: -11 }];
+
+  return (
+    <>
+      <div
+        className="group flex flex-col gap-2"
+        onMouseEnter={() => setHovered(true)}
+        onMouseLeave={() => setHovered(false)}
+      >
+        {/* stack */}
+        <div
+          className="relative cursor-pointer"
+          style={{ paddingBottom: others.length * 10 }}
+          onClick={() => setModalOpen(true)}
+        >
+          {/* camadas traseiras */}
+          {others.map((slug, i) => {
+            const color = (manifest.variants?.[slug] as VariantMeta | undefined)?.playerColor;
+            const off   = hovered ? hoverOffset[i] : restOffset[i];
+            return (
+              <div
+                key={slug}
+                className="absolute inset-0 overflow-hidden rounded-xl"
+                style={{
+                  background:  color ? `${color}28` : "#23252a",
+                  border:      `2px solid ${color ?? "#3a3d42"}44`,
+                  transform:   `translate(${off.x}px, ${off.y}px) rotate(${off.r}deg)`,
+                  transition:  "transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1)",
+                  zIndex:      others.length - i,
+                  aspectRatio: "864 / 1234",
+                }}
+              />
+            );
+          })}
+
+          {/* carta da frente */}
+          <div
+            className="relative overflow-hidden rounded-xl shadow-lg shadow-black/40"
+            style={{
+              aspectRatio: "864 / 1234",
+              zIndex:      10,
+              transform:   hovered ? "translateY(-6px)" : "translateY(0)",
+              transition:  "transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)",
+              filter:      hovered ? "drop-shadow(0 12px 24px rgba(0,0,0,.6))" : "none",
+            }}
+          >
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={manifest.cards[front]}
+              alt={manifest.names?.[front] ?? front}
+              className="h-full w-full object-cover"
+              loading="lazy"
+            />
+            {/* dots de cor */}
+            <div className="absolute bottom-2 right-2 flex flex-col gap-1">
+              {colors.map((c, i) => (
+                <span key={i} className="h-2.5 w-2.5 rounded-full border border-neutral-900 shadow"
+                  style={{ background: c }} />
+              ))}
+            </div>
+            {/* badge */}
+            <div className="absolute left-1.5 top-1.5 rounded-md bg-neutral-900/80 px-1.5 py-0.5 text-[9px] font-bold text-neutral-400 backdrop-blur-sm">
+              {slugs.length} vars
+            </div>
+          </div>
+        </div>
+
+        {/* nome abaixo */}
+        <p className="text-center text-xs font-medium text-neutral-400">
+          {manifest.names?.[front] ?? groupKey}
+        </p>
+      </div>
+
+      <GalleryVariantModal
+        groupKey={groupKey}
+        slugs={slugs}
+        manifest={manifest}
+        open={modalOpen}
+        onClose={() => setModalOpen(false)}
+      />
+    </>
+  );
+}
+
+/* ── página principal ── */
 export default function PublicadasPage() {
-  const [status, setStatus] = useState<Status>({ type: "loading" });
-  const [filter, setFilter] = useState<GalleryFilter>(EMPTY);
+  const [status,      setStatus]      = useState<Status>({ type: "loading" });
+  const [filter,      setFilter]      = useState<GalleryFilter>(EMPTY);
   const [showFilters, setShowFilters] = useState(false);
 
   useEffect(() => {
@@ -134,24 +275,24 @@ export default function PublicadasPage() {
   }, []);
 
   if (status.type === "loading") return <Page><div className="flex flex-1 items-center justify-center"><svg className="h-6 w-6 animate-spin text-neutral-600" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"/></svg></div></Page>;
-  if (status.type === "empty") return <Page><div className="flex flex-1 flex-col items-center justify-center gap-3 text-neutral-600"><p className="text-sm">Nenhuma carta publicada ainda.</p><a href="/editor" className="text-xs text-blue-500 hover:text-blue-400">Abrir editor →</a></div></Page>;
-  if (status.type === "error") return <Page><div className="flex flex-1 items-center justify-center"><p className="text-sm text-red-400">Erro: {status.message}</p></div></Page>;
+  if (status.type === "empty")   return <Page><div className="flex flex-1 flex-col items-center justify-center gap-3 text-neutral-600"><p className="text-sm">Nenhuma carta publicada ainda.</p><a href="/editor" className="text-xs text-blue-500 hover:text-blue-400">Abrir editor →</a></div></Page>;
+  if (status.type === "error")   return <Page><div className="flex flex-1 items-center justify-center"><p className="text-sm text-red-400">Erro: {status.message}</p></div></Page>;
 
   const { manifest } = status;
-  const allSlugs = Object.keys(manifest.cards);
+  const allSlugs  = Object.keys(manifest.cards);
   const hasFilter = filter.name || filter.types.length || filter.rarities.length || filter.companies.length;
 
-  // filtra slugs
   const filteredSlugs = hasFilter
     ? allSlugs.filter((s) => matchesFilter(s, manifest, filter))
     : allSlugs;
 
-  // agrupa variantes (só sem filtro)
+  // agrupa variantes — stacks mesmo com filtro ativo
   const groupMap: Record<string, string[]> = {};
-  const singles: string[] = [];
+  const singles:  string[] = [];
+
   for (const slug of filteredSlugs) {
     const meta = manifest.variants?.[slug] as VariantMeta | undefined;
-    if (!hasFilter && meta?.variantGroup) {
+    if (meta?.variantGroup) {
       if (!groupMap[meta.variantGroup]) groupMap[meta.variantGroup] = [];
       groupMap[meta.variantGroup].push(slug);
     } else {
@@ -161,6 +302,7 @@ export default function PublicadasPage() {
 
   const TYPES    = Object.entries(CARD_TYPE_THEME) as [string, { label: string; accent: string }][];
   const RARITIES = Object.entries(RARITY_LABEL)   as [string, string][];
+  const advCount = filter.types.length + filter.rarities.length + filter.companies.length;
 
   return (
     <Page>
@@ -178,10 +320,9 @@ export default function PublicadasPage() {
         </a>
       </header>
 
-      {/* barra de filtros */}
+      {/* barra de filtro */}
       <div className="flex flex-col gap-3 rounded-xl border border-neutral-800 bg-neutral-900/50 p-4">
         <div className="flex items-center gap-3">
-          {/* busca por nome */}
           <div className="relative flex-1 max-w-sm">
             <svg className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-neutral-600" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth={1.8}>
               <circle cx="6.5" cy="6.5" r="4.5"/><path strokeLinecap="round" d="M10 10l3.5 3.5"/>
@@ -190,10 +331,9 @@ export default function PublicadasPage() {
               onChange={(e) => setFilter({ ...filter, name: e.target.value })}
               className="w-full rounded-lg border border-neutral-700 bg-neutral-800/60 py-2 pl-9 pr-3 text-sm text-neutral-200 outline-none placeholder:text-neutral-600 focus:border-neutral-500 transition-colors" />
           </div>
-          {/* toggle filtros avançados */}
           <button type="button" onClick={() => setShowFilters((o) => !o)}
             className={`flex items-center gap-2 rounded-lg border px-3 py-2 text-sm font-medium transition-colors ${
-              showFilters || filter.types.length || filter.rarities.length || filter.companies.length
+              showFilters || advCount > 0
                 ? "border-blue-500 bg-blue-500/10 text-blue-400"
                 : "border-neutral-700 bg-neutral-800/60 text-neutral-500 hover:border-neutral-500 hover:text-neutral-300"
             }`}>
@@ -201,10 +341,8 @@ export default function PublicadasPage() {
               <path strokeLinecap="round" d="M2 4h12M4 8h8M6 12h4"/>
             </svg>
             Filtros
-            {(filter.types.length + filter.rarities.length + filter.companies.length) > 0 && (
-              <span className="flex h-5 w-5 items-center justify-center rounded-full bg-blue-500 text-[10px] font-bold text-white">
-                {filter.types.length + filter.rarities.length + filter.companies.length}
-              </span>
+            {advCount > 0 && (
+              <span className="flex h-5 w-5 items-center justify-center rounded-full bg-blue-500 text-[10px] font-bold text-white">{advCount}</span>
             )}
           </button>
           {hasFilter && (
@@ -213,9 +351,8 @@ export default function PublicadasPage() {
           )}
         </div>
 
-        {/* filtros avançados */}
         {showFilters && (
-          <div className="flex flex-col gap-4 pt-2 border-t border-neutral-800">
+          <div className="flex flex-col gap-4 border-t border-neutral-800 pt-3">
             <div>
               <p className="mb-2 text-[10px] font-bold uppercase tracking-widest text-neutral-600">Tipo</p>
               <div className="flex flex-wrap gap-2">
@@ -252,11 +389,8 @@ export default function PublicadasPage() {
           </div>
         )}
 
-        {/* contador de resultados */}
         {hasFilter && (
-          <p className="text-xs text-neutral-600">
-            {filteredSlugs.length} de {allSlugs.length} cartas
-          </p>
+          <p className="text-xs text-neutral-600">{filteredSlugs.length} de {allSlugs.length} cartas</p>
         )}
       </div>
 
@@ -264,11 +398,17 @@ export default function PublicadasPage() {
       <div className="grid grid-cols-2 gap-6 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
         {singles.map((slug) => <CardTile key={slug} slug={slug} manifest={manifest} />)}
         {Object.entries(groupMap).map(([groupKey, slugs]) => (
-          <VariantGroup key={groupKey} groupKey={groupKey} slugs={slugs} manifest={manifest} />
+          slugs.length === 1
+            ? <CardTile key={groupKey} slug={slugs[0]} manifest={manifest} />
+            : <GalleryVariantStack key={groupKey} groupKey={groupKey} slugs={slugs} manifest={manifest} />
         ))}
         {filteredSlugs.length === 0 && (
           <div className="col-span-full py-12 text-center text-sm text-neutral-600">
-            Nenhuma carta encontrada com esses filtros.
+            Nenhuma carta encontrada.{!manifest.meta && hasFilter && advCount > 0 && (
+              <span className="block mt-1 text-xs text-neutral-700">
+                Publique novamente para ativar os filtros de tipo e raridade.
+              </span>
+            )}
           </div>
         )}
       </div>
