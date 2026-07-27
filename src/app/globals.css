@@ -2,24 +2,17 @@
 
 /* ── Design tokens ───────────────────────────────────────────── */
 :root {
-  /* superfícies em camadas — cria profundidade sem ser flat */
-  --bg-base:     #0c0d0f;   /* fundo mais profundo */
-  --bg-surface:  #131518;   /* painéis laterais */
-  --bg-raised:   #1a1d22;   /* elementos elevados */
-  --bg-overlay:  #20242b;   /* dropdowns, modais */
-
-  /* bordas */
+  --bg-base:     #0c0d0f;
+  --bg-surface:  #131518;
+  --bg-raised:   #1a1d22;
+  --bg-overlay:  #20242b;
   --border:      #252930;
   --border-sub:  #1c1f26;
-
-  /* texto */
-  --text-1: #eceef3;   /* primário */
-  --text-2: #8892a4;   /* secundário */
-  --text-3: #4a5168;   /* muted */
-
-  /* acento */
+  --text-1:      #eceef3;
+  --text-2:      #8892a4;
+  --text-3:      #4a5168;
   --accent:      #3b82f6;
-  --accent-glow: rgba(59, 130, 246, 0.12);
+  --accent-glow: rgba(59, 130, 246, 0.15);
 }
 
 @theme inline {
@@ -28,9 +21,7 @@
   --font-sans: 'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif;
 }
 
-/* ── Base ────────────────────────────────────────────────────── */
 *, *::before, *::after { box-sizing: border-box; }
-
 html { -webkit-font-smoothing: antialiased; }
 
 body {
@@ -41,11 +32,8 @@ body {
   line-height: 1.5;
 }
 
-/* scrollbar minimalista */
 ::-webkit-scrollbar        { width: 4px; height: 4px; }
 ::-webkit-scrollbar-track  { background: transparent; }
 ::-webkit-scrollbar-thumb  { background: var(--border); border-radius: 99px; }
 ::-webkit-scrollbar-thumb:hover { background: var(--text-3); }
-
-/* seleção */
 ::selection { background: var(--accent-glow); color: var(--text-1); }

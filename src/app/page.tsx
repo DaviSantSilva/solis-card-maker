@@ -9,7 +9,7 @@ export default function Home() {
     <main className="relative flex min-h-screen flex-col items-center overflow-hidden"
       style={{ background: "var(--bg-base)" }}>
 
-      {/* glow de fundo sutil */}
+      {/* glow de fundo */}
       <div className="pointer-events-none absolute inset-0 overflow-hidden">
         <div className="absolute left-1/4 top-0 h-[600px] w-[600px] -translate-x-1/2 rounded-full opacity-[0.06]"
           style={{ background: "radial-gradient(circle, #3b82f6, transparent 70%)" }} />
@@ -17,7 +17,6 @@ export default function Home() {
 
       {/* hero */}
       <section className="relative z-10 flex w-full max-w-5xl flex-col items-center px-6 pb-16 pt-24 text-center">
-        {/* badge */}
         <span className="mb-6 inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-medium"
           style={{ borderColor: "var(--border)", color: "var(--text-3)", background: "var(--bg-surface)" }}>
           <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
@@ -35,23 +34,22 @@ export default function Home() {
           para o Tabletop Simulator via manifest público.
         </p>
 
+        {/* CTAs — sem event handlers, usa CSS via Tailwind */}
         <div className="flex items-center gap-3">
           <a href="/editor"
-            className="rounded-lg px-5 py-2.5 text-sm font-semibold text-white shadow-lg transition-all hover:brightness-110 active:scale-95"
-            style={{ background: "var(--accent)", boxShadow: "0 0 24px var(--accent-glow)" }}>
+            className="rounded-lg px-5 py-2.5 text-sm font-semibold text-white shadow-lg transition-all duration-150 hover:brightness-110 active:scale-95"
+            style={{ background: "#3b82f6", boxShadow: "0 0 24px rgba(59,130,246,0.25)" }}>
             Abrir Editor
           </a>
           <a href="/publicadas"
-            className="rounded-lg border px-5 py-2.5 text-sm font-medium transition-colors"
-            style={{ borderColor: "var(--border)", color: "var(--text-2)", background: "var(--bg-surface)" }}
-            onMouseOver={(e) => (e.currentTarget.style.color = "var(--text-1)")}
-            onMouseOut={(e)  => (e.currentTarget.style.color = "var(--text-2)")}>
+            className="rounded-lg border px-5 py-2.5 text-sm font-medium transition-colors duration-150 hover:border-neutral-500 hover:text-white"
+            style={{ borderColor: "var(--border)", color: "var(--text-2)", background: "var(--bg-surface)" }}>
             Ver publicadas
           </a>
         </div>
       </section>
 
-      {/* preview de cartas */}
+      {/* preview cards */}
       <section className="relative z-10 flex w-full justify-center gap-8 px-6 pb-24">
         {cards.map((card) => {
           const theme = CARD_TYPE_THEME[card.cardType];
