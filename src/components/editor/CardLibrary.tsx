@@ -34,6 +34,208 @@ function groupLibrary(cards: SolisCard[]): LibraryItem[] {
   ];
 }
 
+/* ── modal de variantes ── */
+function VariantModal({
+  item, open, onClose, activeCardId, onLoad, onDuplicate, onDelete,
+}: {
+  item: Extract<LibraryItem, { type: "group" }>;
+  open: boolean;
+  onClose: () => void;
+  activeCardId: string;
+  onLoad: (id: string) => void;
+  onDuplicate: (id: string) => void;
+  onDelete: (id: string) => void;
+}) {
+  if (!open) return null;
+
+  return (
+    /* backdrop */
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      onClick={onClose}
+    >
+      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
+
+      {/* painel */}
+      <div
+        className="relative w-full max-w-xl overflow-hidden rounded-2xl border border-neutral-700 bg-neutral-900 shadow-2xl shadow-black/60"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* header */}
+        <div className="flex items-center justify-between border-b border-neutral-800 px-5 py-4">
+          <div>
+            <p className="text-sm font-semibold text-neutral-100">{item.name}</p>
+            <p className="text-xs text-neutral-500">{item.cards.length} variantes</p>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="flex h-7 w-7 items-center justify-center rounded-lg text-neutral-500 transition-colors hover:bg-neutral-800 hover:text-neutral-300"
+          >
+            ✕
+          </button>
+        </div>
+
+        {/* grid de variantes */}
+        <div className="grid grid-cols-2 gap-4 overflow-y-auto p-5 sm:grid-cols-3"
+          style={{ maxHeight: "70vh" }}>
+          {item.cards.map((card) => {
+            const isActive = card.id === activeCardId;
+            return (
+              <div key={card.id} className="flex flex-col gap-2">
+                {/* miniatura */}
+                <div
+                  className={`relative cursor-pointer rounded-xl transition-all ${
+                    isActive ? "ring-2 ring-blue-500" : "hover:ring-1 hover:ring-neutral-600"
+                  }`}
+                  onClick={() => { onLoad(card.id); onClose(); }}
+                >
+                  <CardCanvas card={card} width={150} />
+                  {/* dot de cor */}
+                  {card.playerColor && (
+                    <span
+                      className="absolute right-1.5 top-1.5 h-3.5 w-3.5 rounded-full border-2 border-neutral-900 shadow"
+                      style={{ background: card.playerColor }}
+                    />
+                  )}
+                </div>
+
+                {/* ações */}
+                <div className="flex gap-1">
+                  <button
+                    onClick={() => { onLoad(card.id); onClose(); }}
+                    className="flex-1 rounded-md bg-blue-700/80 py-1 text-[10px] font-semibold text-white hover:bg-blue-600 transition-colors"
+                  >
+                    Editar
+                  </button>
+                  <button
+                    onClick={() => onDuplicate(card.id)}
+                    className="rounded-md border border-neutral-700 px-2 py-1 text-[10px] text-neutral-500 hover:text-neutral-300 transition-colors"
+                    title="Duplicar"
+                  >
+                    ⊕
+                  </button>
+                  <button
+                    onClick={() => { if (confirm(`Apagar variante?`)) onDelete(card.id); }}
+                    className="rounded-md border border-neutral-700 px-2 py-1 text-[10px] text-red-500/70 hover:text-red-400 transition-colors"
+                    title="Apagar"
+                  >
+                    ✕
+                  </button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ── stack de variantes ── */
+function VariantStack({
+  item, activeCardId, onLoad, onDuplicate, onDelete,
+}: {
+  item: Extract<LibraryItem, { type: "group" }>;
+  activeCardId: string;
+  onLoad: (id: string) => void;
+  onDuplicate: (id: string) => void;
+  onDelete: (id: string) => void;
+}) {
+  const [hovered, setHovered] = useState(false);
+  const [modalOpen, setModalOpen] = useState(false);
+
+  const front  = item.cards[0];
+  const others = item.cards.slice(1, 3); // máximo 2 camadas traseiras
+  const isGroupActive = item.cards.some((c) => c.id === activeCardId);
+
+  // offsets das camadas traseiras em repouso e no hover
+  const restOffset  = [{ x: -4, y: 4, r: -1.2 }, { x: -8, y: 8, r: -2.4 }];
+  const hoverOffset = [{ x: -14, y: 10, r: -6  }, { x: -26, y: 16, r: -11 }];
+
+  return (
+    <>
+      <div
+        className="relative cursor-pointer select-none"
+        style={{
+          width: 168,
+          // altura extra para o fan não cortar
+          paddingBottom: others.length * 10,
+        }}
+        onMouseEnter={() => setHovered(true)}
+        onMouseLeave={() => setHovered(false)}
+        onClick={() => setModalOpen(true)}
+      >
+        {/* camadas traseiras */}
+        {others.map((card, i) => {
+          const off = hovered ? hoverOffset[i] : restOffset[i];
+          return (
+            <div
+              key={card.id}
+              className="absolute inset-0 overflow-hidden rounded-[10px]"
+              style={{
+                transform: `translate(${off.x}px, ${off.y}px) rotate(${off.r}deg)`,
+                transition: "transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1)",
+                zIndex: others.length - i,
+                background: card.playerColor
+                  ? `${card.playerColor}28`
+                  : "#23252a",
+                border: `2px solid ${card.playerColor ?? "#3a3d42"}44`,
+              }}
+            />
+          );
+        })}
+
+        {/* carta da frente */}
+        <div
+          className="relative"
+          style={{
+            zIndex: 10,
+            transform: hovered ? "translateY(-6px)" : "translateY(0)",
+            transition: "transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)",
+            filter: hovered ? "drop-shadow(0 12px 24px rgba(0,0,0,.6))" : "none",
+          }}
+        >
+          <CardCanvas card={front} width={168} />
+
+          {/* ring quando uma variante está ativa */}
+          {isGroupActive && (
+            <div className="absolute inset-0 rounded-[10px] ring-2 ring-blue-500 pointer-events-none" />
+          )}
+
+          {/* dots de cor dos jogadores */}
+          <div className="absolute bottom-8 right-2 flex flex-col gap-1">
+            {item.cards.map((c) =>
+              c.playerColor ? (
+                <span
+                  key={c.id}
+                  className="h-2.5 w-2.5 rounded-full border border-neutral-900 shadow"
+                  style={{ background: c.playerColor }}
+                />
+              ) : null
+            )}
+          </div>
+
+          {/* badge de contagem */}
+          <div className="absolute left-1 top-1 rounded-md bg-neutral-900/80 px-1.5 py-0.5 text-[9px] font-bold text-neutral-400 backdrop-blur-sm">
+            {item.cards.length} vars
+          </div>
+        </div>
+      </div>
+
+      <VariantModal
+        item={item}
+        open={modalOpen}
+        onClose={() => setModalOpen(false)}
+        activeCardId={activeCardId}
+        onLoad={onLoad}
+        onDuplicate={onDuplicate}
+        onDelete={onDelete}
+      />
+    </>
+  );
+}
+
 /* ── card individual ── */
 function CardItem({ card, isActive, onLoad, onDuplicate, onDelete }: {
   card: SolisCard; isActive: boolean;
@@ -45,12 +247,12 @@ function CardItem({ card, isActive, onLoad, onDuplicate, onDelete }: {
       isActive ? "ring-2 ring-blue-500" : "hover:ring-1 hover:ring-neutral-600"
     }`}>
       <div onClick={onLoad}><CardCanvas card={card} width={168} /></div>
-      <span className="absolute left-1 top-1 rounded-sm px-1 py-0.5 text-[8px] font-bold uppercase tracking-wider text-white"
-        style={{ background: theme.accent }}>{theme.label}</span>
-      {card.playerColor && (
-        <span className="absolute right-1 top-1 h-3 w-3 rounded-full border border-neutral-900"
-          style={{ background: card.playerColor }} title="Cor do jogador" />
-      )}
+      <span
+        className="absolute left-1 top-1 rounded-sm px-1 py-0.5 text-[8px] font-bold uppercase tracking-wider text-white"
+        style={{ background: theme.accent }}
+      >
+        {theme.label}
+      </span>
       <div className="absolute inset-0 flex flex-col items-center justify-end gap-1 rounded-lg bg-neutral-950/70 pb-2 opacity-0 transition-opacity group-hover:opacity-100">
         <button onClick={onLoad} className="rounded bg-blue-700 px-3 py-0.5 text-[10px] font-semibold text-white hover:bg-blue-600">Editar</button>
         <button onClick={onDuplicate} className="rounded bg-neutral-800 px-3 py-0.5 text-[10px] font-medium text-neutral-200 hover:bg-neutral-700">Duplicar</button>
@@ -60,62 +262,30 @@ function CardItem({ card, isActive, onLoad, onDuplicate, onDelete }: {
   );
 }
 
-/* ── grupo de variantes ── */
-function VariantGroup({ item, activeCardId, onLoad, onDuplicate, onDelete }: {
-  item: Extract<LibraryItem, { type: "group" }>;
-  activeCardId: string;
-  onLoad: (id: string) => void; onDuplicate: (id: string) => void; onDelete: (id: string) => void;
-}) {
-  const [open, setOpen] = useState(true);
-  const colors = item.cards.map((c) => c.playerColor).filter(Boolean);
-  return (
-    <div className="flex flex-col gap-1 rounded-lg border border-neutral-800 bg-neutral-800/20 p-2">
-      <button type="button" onClick={() => setOpen((o) => !o)}
-        className="flex items-center justify-between text-left">
-        <span className="text-[10px] font-semibold text-neutral-400 truncate">{item.name}</span>
-        <div className="flex items-center gap-1.5 shrink-0 ml-2">
-          {colors.map((c, i) => (
-            <span key={i} className="h-2.5 w-2.5 rounded-full border border-neutral-700"
-              style={{ background: c! }} />
-          ))}
-          <svg className={`h-3 w-3 text-neutral-600 transition-transform ${open ? "rotate-180" : ""}`}
-            viewBox="0 0 10 6" fill="currentColor"><path d="M0 0l5 6 5-6z" /></svg>
-        </div>
-      </button>
-      {open && (
-        <div className="flex flex-col gap-2 pt-1">
-          {item.cards.map((card) => (
-            <CardItem key={card.id} card={card} isActive={card.id === activeCardId}
-              onLoad={() => onLoad(card.id)} onDuplicate={() => onDuplicate(card.id)}
-              onDelete={() => { if (confirm(`Apagar variante?`)) onDelete(card.id); }} />
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
-
 /* ── painel principal ── */
 export function CardLibrary() {
   const { library, activeCard, loadCard, duplicateCard, deleteCard } = useEditorStore();
   const [filter, setFilter] = useState<FilterCriteria>(EMPTY_FILTER);
 
-  const filtered     = filterCards(library, filter);
-  const useGrouping  = isFilterEmpty(filter); // agrupa só quando sem filtro
-  const items        = useGrouping ? groupLibrary(filtered) : filtered.map((c) => ({ type: "single" as const, card: c }));
-  const groups       = items.filter((i) => i.type === "group").length;
+  const filtered    = filterCards(library, filter);
+  const useGrouping = isFilterEmpty(filter);
+  const items       = useGrouping
+    ? groupLibrary(filtered)
+    : filtered.map((c) => ({ type: "single" as const, card: c }));
+
+  const groups  = items.filter((i) => i.type === "group").length;
 
   return (
-    /* w-64 = 256px — mais largo para comportar o filtro */
     <aside className="flex h-full w-64 shrink-0 flex-col border-l border-neutral-800 bg-neutral-900">
-      {/* header + search */}
       <div className="flex flex-col gap-3 border-b border-neutral-800 px-3 py-3">
-        <div className="flex items-center justify-between">
-          <p className="text-[10px] font-bold uppercase tracking-widest text-neutral-500">
-            Biblioteca · {library.length}
-            {groups > 0 && <span className="ml-1 text-neutral-600">({groups} grupo{groups !== 1 ? "s" : ""})</span>}
-          </p>
-        </div>
+        <p className="text-[10px] font-bold uppercase tracking-widest text-neutral-500">
+          Biblioteca · {library.length}
+          {groups > 0 && (
+            <span className="ml-1 text-neutral-600">
+              ({groups} grupo{groups !== 1 ? "s" : ""})
+            </span>
+          )}
+        </p>
         <FilterBar
           filter={filter}
           onChange={setFilter}
@@ -124,21 +294,29 @@ export function CardLibrary() {
         />
       </div>
 
-      {/* lista */}
-      <div className="flex flex-col gap-3 overflow-y-auto p-3">
+      <div className="flex flex-col gap-4 overflow-y-auto p-3">
         {items.map((item) =>
           item.type === "single" ? (
-            <CardItem key={item.card.id} card={item.card}
+            <CardItem
+              key={item.card.id}
+              card={item.card}
               isActive={item.card.id === activeCard.id}
               onLoad={() => loadCard(item.card.id)}
               onDuplicate={() => duplicateCard(item.card.id)}
-              onDelete={() => { if (confirm(`Apagar "${item.card.name}"?`)) deleteCard(item.card.id); }} />
+              onDelete={() => { if (confirm(`Apagar "${item.card.name}"?`)) deleteCard(item.card.id); }}
+            />
           ) : (
-            <VariantGroup key={item.variantGroup} item={item}
+            <VariantStack
+              key={item.variantGroup}
+              item={item}
               activeCardId={activeCard.id}
-              onLoad={loadCard} onDuplicate={duplicateCard} onDelete={deleteCard} />
+              onLoad={loadCard}
+              onDuplicate={duplicateCard}
+              onDelete={deleteCard}
+            />
           )
         )}
+
         {library.length === 0 && (
           <p className="pt-6 text-center text-[11px] text-neutral-600">Nenhuma carta salva</p>
         )}
