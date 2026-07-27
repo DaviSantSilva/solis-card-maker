@@ -36,16 +36,18 @@ function toggle<T>(arr: T[], v: T): T[] {
 
 /**
  * Retorna true se o slug passa pelo filtro.
- * Se meta está ausente e há filtros de tipo/raridade/empresa ativos,
- * a carta NÃO passa — o usuário precisa republicar para obter os metadados.
+ *
+ * Se o manifest não tem o campo `meta` (publicado antes da feature),
+ * os filtros de tipo/raridade/empresa são ignorados — o filtro por nome
+ * ainda funciona. Uma nota é exibida ao usuário sugerindo republicar.
  */
 function matchesFilter(
   slug: string,
   manifest: PublicationManifest,
-  f: GalleryFilter
+  f: GalleryFilter,
+  manifestHasMeta: boolean,
 ): boolean {
   const name = manifest.names?.[slug] ?? slug;
-  const meta = manifest.meta?.[slug] as CardMeta | undefined;
 
   // busca por nome — sempre disponível
   if (f.name) {
@@ -54,13 +56,12 @@ function matchesFilter(
     if (!n.includes(q)) return false;
   }
 
-  // filtros que dependem de meta — sem meta, carta é excluída quando filtros estão ativos
-  const needsMeta = f.types.length > 0 || f.rarities.length > 0 || f.companies.length > 0;
-  if (needsMeta) {
-    if (!meta) return false; // meta ausente = carta publicada antes da feature de meta
-    if (f.types.length    && !f.types.includes(meta.cardType))   return false;
-    if (f.rarities.length && !f.rarities.includes(meta.rarity))  return false;
-    if (f.companies.length && !f.companies.includes(meta.companyId)) return false;
+  // filtros que dependem de meta — só aplicados se o manifest tem o campo
+  if (manifestHasMeta) {
+    const meta = manifest.meta?.[slug] as CardMeta | undefined;
+    if (f.types.length    && (!meta || !f.types.includes(meta.cardType)))    return false;
+    if (f.rarities.length && (!meta || !f.rarities.includes(meta.rarity)))   return false;
+    if (f.companies.length && (!meta || !f.companies.includes(meta.companyId))) return false;
   }
 
   return true;
@@ -279,11 +280,12 @@ export default function PublicadasPage() {
   if (status.type === "error")   return <Page><div className="flex flex-1 items-center justify-center"><p className="text-sm text-red-400">Erro: {status.message}</p></div></Page>;
 
   const { manifest } = status;
-  const allSlugs  = Object.keys(manifest.cards);
-  const hasFilter = filter.name || filter.types.length || filter.rarities.length || filter.companies.length;
+  const allSlugs       = Object.keys(manifest.cards);
+  const manifestHasMeta = !!(manifest.meta && Object.keys(manifest.meta).length > 0);
+  const hasFilter      = filter.name || filter.types.length || filter.rarities.length || filter.companies.length;
 
   const filteredSlugs = hasFilter
-    ? allSlugs.filter((s) => matchesFilter(s, manifest, filter))
+    ? allSlugs.filter((s) => matchesFilter(s, manifest, filter, manifestHasMeta))
     : allSlugs;
 
   // agrupa variantes — stacks mesmo com filtro ativo
@@ -390,7 +392,14 @@ export default function PublicadasPage() {
         )}
 
         {hasFilter && (
-          <p className="text-xs text-neutral-600">{filteredSlugs.length} de {allSlugs.length} cartas</p>
+          <p className="text-xs text-neutral-600">
+            {filteredSlugs.length} de {allSlugs.length} cartas
+            {!manifestHasMeta && advCount > 0 && (
+              <span className="ml-2 text-neutral-700">
+                · Filtros de tipo/raridade/empresa requerem republicação para ativar
+              </span>
+            )}
+          </p>
         )}
       </div>
 
