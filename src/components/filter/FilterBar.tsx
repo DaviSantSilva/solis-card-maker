@@ -3,115 +3,91 @@ import { useEffect, useRef, useState } from "react";
 import { FilterCriteria, EMPTY_FILTER, activeFilterCount, isFilterEmpty } from "@/lib/filter";
 import { FilterDropdown } from "./FilterDropdown";
 
-export function FilterBar({
-  filter,
-  onChange,
-  resultCount,
-  totalCount,
-}: {
-  filter: FilterCriteria;
-  onChange: (f: FilterCriteria) => void;
-  resultCount: number;
-  totalCount: number;
+export function FilterBar({ filter, onChange, resultCount, totalCount }: {
+  filter: FilterCriteria; onChange: (f: FilterCriteria) => void;
+  resultCount: number; totalCount: number;
 }) {
-  const [open, setOpen] = useState(false);
-  const panelRef = useRef<HTMLDivElement>(null);
-  const advCount = activeFilterCount(filter);
-  const hasAny   = !isFilterEmpty(filter);
+  const [open, setOpen]   = useState(false);
+  const panelRef          = useRef<HTMLDivElement>(null);
+  const advCount          = activeFilterCount(filter);
+  const hasAny            = !isFilterEmpty(filter);
 
-  /* fecha dropdown ao clicar fora */
   useEffect(() => {
     if (!open) return;
-    const handler = (e: MouseEvent) => {
-      if (!panelRef.current?.contains(e.target as Node)) setOpen(false);
-    };
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
+    const h = (e: MouseEvent) => { if (!panelRef.current?.contains(e.target as Node)) setOpen(false); };
+    document.addEventListener("mousedown", h);
+    return () => document.removeEventListener("mousedown", h);
   }, [open]);
 
   return (
-    <div className="flex flex-col gap-2">
-      {/* barra principal */}
-      <div className="flex items-center gap-2">
-        {/* busca por nome */}
+    <div className="flex flex-col gap-1.5">
+      <div className="flex items-center gap-1.5">
+        {/* busca */}
         <div className="relative flex-1">
-          <svg className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-neutral-600"
+          <svg className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2" style={{ color: "var(--text-3)" }}
             fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth={1.8}>
-            <circle cx="6.5" cy="6.5" r="4.5"/>
-            <path strokeLinecap="round" d="M10 10l3.5 3.5"/>
+            <circle cx="6.5" cy="6.5" r="4.5"/><path strokeLinecap="round" d="M10 10l3.5 3.5"/>
           </svg>
-          <input
-            type="search"
-            placeholder="Buscar por nome…"
-            value={filter.name}
+          <input type="search" placeholder="Buscar…" value={filter.name}
             onChange={(e) => onChange({ ...filter, name: e.target.value })}
-            className="w-full rounded-md border border-neutral-700 bg-neutral-800/60 py-1.5 pl-8 pr-3 text-xs text-neutral-200 outline-none placeholder:text-neutral-600 focus:border-neutral-500 transition-colors"
-          />
+            className="w-full rounded-lg border py-1.5 pl-8 pr-3 text-xs outline-none transition-all"
+            style={{ borderColor: "var(--border)", background: "var(--bg-raised)", color: "var(--text-1)" }}
+            onFocus={(e) => { e.currentTarget.style.borderColor = "var(--accent)"; e.currentTarget.style.boxShadow = "0 0 0 3px var(--accent-glow)"; }}
+            onBlur={(e)  => { e.currentTarget.style.borderColor = "var(--border)"; e.currentTarget.style.boxShadow = "none"; }} />
         </div>
 
-        {/* botão de filtros avançados */}
+        {/* filtros */}
         <div className="relative" ref={panelRef}>
-          <button
-            type="button"
-            onClick={() => setOpen((o) => !o)}
-            className={`flex items-center gap-1.5 rounded-md border px-2.5 py-1.5 text-xs font-medium transition-colors ${
-              advCount > 0 || open
-                ? "border-blue-500 bg-blue-500/10 text-blue-400"
-                : "border-neutral-700 bg-neutral-800/60 text-neutral-500 hover:border-neutral-500 hover:text-neutral-300"
-            }`}
-          >
+          <button type="button" onClick={() => setOpen((o) => !o)}
+            className="flex items-center gap-1 rounded-lg border px-2 py-1.5 text-xs font-medium transition-all"
+            style={{
+              borderColor: advCount > 0 ? "var(--accent)" : "var(--border)",
+              color:       advCount > 0 ? "var(--accent)" : "var(--text-3)",
+              background:  advCount > 0 ? "var(--accent-glow)" : "var(--bg-raised)",
+            }}>
             <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth={1.8}>
               <path strokeLinecap="round" d="M2 4h12M4 8h8M6 12h4"/>
             </svg>
-            Filtros
-            {advCount > 0 && (
-              <span className="flex h-4 w-4 items-center justify-center rounded-full bg-blue-500 text-[10px] font-bold text-white">
-                {advCount}
-              </span>
-            )}
+            {advCount > 0 && <span className="text-[10px] font-bold">{advCount}</span>}
           </button>
 
-          {/* painel de filtros avançados */}
           {open && (
-            <div className="absolute right-0 top-full z-50 mt-2 w-80 rounded-xl border border-neutral-700 bg-neutral-900 shadow-2xl shadow-black/50">
-              <div className="flex items-center justify-between border-b border-neutral-800 px-4 py-3">
-                <p className="text-xs font-semibold text-neutral-300">Filtros avançados</p>
+            <div className="absolute left-0 top-full z-50 mt-2 w-80 overflow-hidden rounded-xl border shadow-2xl"
+              style={{ borderColor: "var(--border)", background: "var(--bg-overlay)", boxShadow: "0 24px 48px rgba(0,0,0,.6)" }}>
+              <div className="flex items-center justify-between border-b px-4 py-3"
+                style={{ borderColor: "var(--border)" }}>
+                <p className="text-xs font-semibold" style={{ color: "var(--text-1)" }}>Filtros avançados</p>
                 {advCount > 0 && (
-                  <button
-                    type="button"
-                    onClick={() => onChange({ ...EMPTY_FILTER, name: filter.name })}
-                    className="text-[10px] text-neutral-600 hover:text-red-400 transition-colors"
-                  >
-                    Limpar filtros
+                  <button type="button" onClick={() => onChange({ ...EMPTY_FILTER, name: filter.name })}
+                    className="text-[10px] transition-colors" style={{ color: "var(--text-3)" }}
+                    onMouseOver={(e) => (e.currentTarget.style.color = "#f87171")}
+                    onMouseOut={(e)  => (e.currentTarget.style.color = "var(--text-3)")}>
+                    Limpar
                   </button>
                 )}
               </div>
-              <div className="max-h-[70vh] overflow-y-auto">
+              <div className="max-h-[65vh] overflow-y-auto">
                 <FilterDropdown filter={filter} onChange={onChange} />
               </div>
             </div>
           )}
         </div>
 
-        {/* limpar tudo */}
+        {/* limpar */}
         {hasAny && (
-          <button
-            type="button"
-            onClick={() => onChange(EMPTY_FILTER)}
-            className="rounded-md border border-neutral-700 px-2 py-1.5 text-xs text-neutral-600 transition-colors hover:border-neutral-500 hover:text-neutral-300"
-            title="Limpar todos os filtros"
-          >
+          <button type="button" onClick={() => onChange(EMPTY_FILTER)}
+            className="rounded-lg border px-1.5 py-1.5 text-xs transition-colors"
+            style={{ borderColor: "var(--border)", color: "var(--text-3)" }}
+            onMouseOver={(e) => (e.currentTarget.style.color = "#f87171")}
+            onMouseOut={(e)  => (e.currentTarget.style.color = "var(--text-3)")}>
             ✕
           </button>
         )}
       </div>
 
-      {/* contador de resultados */}
       {hasAny && (
-        <p className="text-[10px] text-neutral-600">
-          {resultCount === totalCount
-            ? `${totalCount} cartas`
-            : `${resultCount} de ${totalCount} cartas`}
+        <p className="text-[10px]" style={{ color: "var(--text-3)" }}>
+          {resultCount === totalCount ? `${totalCount} cartas` : `${resultCount} / ${totalCount}`}
         </p>
       )}
     </div>
