@@ -6,11 +6,7 @@ export const metadata: Metadata = {
   description: "Editor de cartas para o jogo de tabuleiro Solis",
 };
 
-export default function RootLayout({
-  children,
-}: Readonly<{
-  children: React.ReactNode;
-}>) {
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="pt-BR" className="h-full antialiased">
       <body className="min-h-full flex flex-col">{children}</body>
