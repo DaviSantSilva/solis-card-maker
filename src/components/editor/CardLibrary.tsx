@@ -5,7 +5,7 @@ import { CardCanvas } from "@/components/card/CardCanvas";
 import { CARD_TYPE_THEME } from "@/lib/cards/theme";
 import { SolisCard } from "@/lib/cards/types";
 import { FilterBar } from "@/components/filter/FilterBar";
-import { FilterCriteria, EMPTY_FILTER, filterCards, isFilterEmpty } from "@/lib/filter";
+import { FilterCriteria, EMPTY_FILTER, filterCards } from "@/lib/filter";
 
 /* ── agrupamento ── */
 type LibraryItem =
@@ -268,10 +268,16 @@ export function CardLibrary() {
   const [filter, setFilter] = useState<FilterCriteria>(EMPTY_FILTER);
 
   const filtered    = filterCards(library, filter);
-  const useGrouping = isFilterEmpty(filter);
-  const items       = useGrouping
-    ? groupLibrary(filtered)
-    : filtered.map((c) => ({ type: "single" as const, card: c }));
+
+  // Sempre agrupa por variantGroup — o filtro só reduz quais cartas aparecem,
+  // não remove o comportamento de stack. Grupos com 1 carta após o filtro
+  // são rebaixados para carta individual.
+  const rawItems = groupLibrary(filtered);
+  const items = rawItems.map((item) =>
+    item.type === "group" && item.cards.length === 1
+      ? { type: "single" as const, card: item.cards[0] }
+      : item
+  );
 
   const groups  = items.filter((i) => i.type === "group").length;
 
