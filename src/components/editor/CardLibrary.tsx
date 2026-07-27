@@ -34,6 +34,11 @@ function groupLibrary(cards: SolisCard[]): LibraryItem[] {
   ];
 }
 
+/* ── raio de borda exato do CardCanvas em width=168px ──
+   CardCanvas: borderRadius = Math.round(26 * scale) = Math.round(26 * 168/864) = 5px
+   Usado nos overlays de ring para que sigam a forma da carta */
+const CARD_RADIUS_168 = Math.round(26 * (168 / 864)); // 5
+
 /* ── modal de variantes ── */
 function VariantModal({
   item, open, onClose, activeCardId, onLoad, onDuplicate, onDelete,
@@ -239,9 +244,6 @@ function VariantStack({
   );
 }
 
-/* ── raio de borda exato do CardCanvas em width=168 ── */
-const CARD_RADIUS_168 = Math.round(26 * (168 / 864)); // 5px
-
 /* ── card individual ── */
 function CardItem({ card, isActive, onLoad, onDuplicate, onDelete }: {
   card: SolisCard; isActive: boolean;
@@ -249,10 +251,11 @@ function CardItem({ card, isActive, onLoad, onDuplicate, onDelete }: {
 }) {
   const theme = CARD_TYPE_THEME[card.cardType];
   return (
-    <div className="group relative cursor-pointer">
+    /* w-fit garante que o div wrapper não se estique para preencher
+       o flex-col pai (w-64), evitando que o ring ultrapasse o card */
+    <div className="group relative w-fit cursor-pointer">
       <div onClick={onLoad}><CardCanvas card={card} width={168} /></div>
 
-      {/* ring de seleção / hover — segue o border-radius exato da carta */}
       {isActive ? (
         <div
           className="absolute inset-0 pointer-events-none ring-2 ring-blue-500"
