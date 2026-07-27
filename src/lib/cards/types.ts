@@ -57,12 +57,12 @@ export type AbilityCategory = typeof ABILITY_CATEGORIES[number];
  * Editável pelo usuário após auto-preenchimento.
  */
 export const ABILITY_TEXT_TEMPLATE: Partial<Record<IconKey, (v: number) => string>> = {
-  trabalho: (v) => `Gere ${v} Trabalho`,
-  credito: (v) => `Receba ${v} Crédito`,
-  titanio: (v) => `Produza ${v} Titânio`,
-  combustivel: (v) => `Produza ${v} Combustível de Fusão`,
-  nanoestrutura: (v) => `Produza ${v} Nanoestruturas`,
-  "materia-exotica": (v) => `Produza ${v} Matéria Exótica`,
+  trabalho:          (v) => `Gere ${v} ${v === 1 ? "Trabalho"              : "Trabalhos"}`,
+  credito:           (v) => `Receba ${v} ${v === 1 ? "Crédito"             : "Créditos"}`,
+  titanio:           (v) => `Produza ${v} ${v === 1 ? "Titânio"            : "Titânios"}`,
+  combustivel:       (v) => `Produza ${v} ${v === 1 ? "Combustível de Fusão" : "Combustíveis de Fusão"}`,
+  nanoestrutura:     (v) => `Produza ${v} ${v === 1 ? "Nanoestrutura"      : "Nanoestruturas"}`,
+  "materia-exotica": (v) => `Produza ${v} ${v === 1 ? "Matéria Exótica"   : "Matérias Exóticas"}`,
 };
 
 export interface CardArt {

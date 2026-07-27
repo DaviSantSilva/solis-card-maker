@@ -4,13 +4,19 @@ import { useEditorStore } from "@/store/editorStore";
 
 export function ArtDropzone() {
   const { activeCard, setArtField } = useEditorStore();
-  const [dragging, setDragging] = useState(false);
+  const [dragging, setDragging]     = useState(false);
 
   const handleFile = useCallback((file: File) => {
     if (!file.type.startsWith("image/")) return;
     const reader = new FileReader();
     reader.onload = (e) => {
-      if (e.target?.result) setArtField("src", e.target.result as string);
+      if (e.target?.result) {
+        setArtField("src", e.target.result as string);
+        // reseta posição ao trocar a imagem
+        setArtField("offsetX", 0);
+        setArtField("offsetY", 0);
+        setArtField("scale", 1);
+      }
     };
     reader.readAsDataURL(file);
   }, [setArtField]);
@@ -23,84 +29,132 @@ export function ArtDropzone() {
   }, [handleFile]);
 
   const hasArt = !!activeCard.art?.src;
-  const art = activeCard.art;
+  const art    = activeCard.art;
+  const scale  = art?.scale ?? 1;
+  const offsetX = art?.offsetX ?? 0;
+  const offsetY = art?.offsetY ?? 0;
 
   return (
     <div className="flex flex-col gap-3">
-      {/* drop zone */}
+
+      {/* dropzone */}
       <div
-        className={`relative flex h-28 cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed transition-colors ${
-          dragging ? "border-blue-500 bg-blue-950/30" : "border-neutral-700 bg-neutral-800/50 hover:border-neutral-500"
-        }`}
+        className="relative flex cursor-pointer flex-col items-center justify-center overflow-hidden rounded-xl transition-all"
+        style={{
+          height: 112,
+          border: `2px dashed ${dragging ? "#3b82f6" : "var(--border)"}`,
+          background: dragging ? "rgba(59,130,246,0.06)" : "var(--bg-raised)",
+        }}
         onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
         onDragLeave={() => setDragging(false)}
         onDrop={onDrop}
       >
         {hasArt ? (
           <>
+            {/* preview da imagem com o mesmo crop que a carta */}
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={art!.src} alt="arte" className="h-full w-full rounded-md object-cover object-top opacity-40" />
-            <span className="absolute text-xs font-semibold text-white drop-shadow">Trocar imagem</span>
+            <img
+              src={art!.src}
+              alt="arte"
+              className="absolute inset-0 h-full w-full"
+              style={{
+                objectFit: "cover",
+                transformOrigin: "50% 50%",
+                transform: `translate(${offsetX}%, ${offsetY}%) scale(${scale})`,
+                opacity: 0.45,
+              }}
+            />
+            <div className="relative flex flex-col items-center gap-1">
+              <svg className="h-5 w-5 text-white/70" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" />
+              </svg>
+              <span className="text-xs font-medium text-white/70">Trocar imagem</span>
+            </div>
           </>
         ) : (
-          <>
-            <svg className="mb-2 h-6 w-6 text-neutral-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+          <div className="flex flex-col items-center gap-2">
+            <svg className="h-6 w-6" style={{ color: "var(--text-3)" }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" />
             </svg>
-            <p className="text-xs text-neutral-500">Arraste ou <span className="text-neutral-300 underline">selecione</span></p>
-            <p className="mt-0.5 text-[10px] text-neutral-600">PNG · JPG · WEBP</p>
-          </>
+            <p className="text-xs" style={{ color: "var(--text-3)" }}>
+              Arraste ou <span className="underline" style={{ color: "var(--text-2)" }}>selecione</span>
+            </p>
+            <p className="text-[10px]" style={{ color: "var(--text-3)" }}>PNG · JPG · WEBP</p>
+          </div>
         )}
         <input type="file" accept="image/*" className="absolute inset-0 cursor-pointer opacity-0"
           onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFile(f); }} />
       </div>
 
-      {/* controles de posicionamento — só aparecem quando há arte */}
+      {/* controles de posicionamento — só quando há arte */}
       {hasArt && (
-        <div className="flex flex-col gap-2 rounded-lg border border-neutral-800 bg-neutral-800/40 p-3">
-          <p className="text-[10px] font-semibold uppercase tracking-widest text-neutral-500">Posicionamento</p>
+        <div className="flex flex-col gap-2 rounded-xl border p-3"
+          style={{ borderColor: "var(--border)", background: "var(--bg-raised)" }}>
 
-          <label className="flex flex-col gap-1">
-            <span className="flex justify-between text-[10px] text-neutral-500">
-              <span>Posição X</span>
-              <span className="font-mono text-neutral-400">{art?.offsetX ?? 0}%</span>
-            </span>
-            <input type="range" min="-80" max="80" step="1"
-              value={art?.offsetX ?? 0}
-              onChange={(e) => setArtField("offsetX", Number(e.target.value))}
-              className="accent-blue-500" />
-          </label>
+          <div className="flex items-center justify-between">
+            <p className="text-[10px] font-semibold uppercase tracking-widest" style={{ color: "var(--text-3)" }}>
+              Posicionamento
+            </p>
+            <button
+              type="button"
+              onClick={() => { setArtField("offsetX", 0); setArtField("offsetY", 0); setArtField("scale", 1); }}
+              className="text-[10px] transition-colors"
+              style={{ color: "var(--text-3)" }}
+              onMouseOver={(e) => (e.currentTarget.style.color = "var(--text-2)")}
+              onMouseOut={(e)  => (e.currentTarget.style.color = "var(--text-3)")}>
+              Resetar
+            </button>
+          </div>
 
-          <label className="flex flex-col gap-1">
-            <span className="flex justify-between text-[10px] text-neutral-500">
-              <span>Posição Y</span>
-              <span className="font-mono text-neutral-400">{art?.offsetY ?? 0}%</span>
-            </span>
-            <input type="range" min="-80" max="80" step="1"
-              value={art?.offsetY ?? 0}
-              onChange={(e) => setArtField("offsetY", Number(e.target.value))}
-              className="accent-blue-500" />
-          </label>
+          {/* zoom */}
+          <Slider
+            label="Zoom"
+            value={scale}
+            display={`${Math.round(scale * 100)}%`}
+            min={0.5} max={3} step={0.02}
+            onChange={(v) => setArtField("scale", v)}
+          />
 
-          <label className="flex flex-col gap-1">
-            <span className="flex justify-between text-[10px] text-neutral-500">
-              <span>Zoom</span>
-              <span className="font-mono text-neutral-400">{((art?.scale ?? 1) * 100).toFixed(0)}%</span>
-            </span>
-            <input type="range" min="0.5" max="3" step="0.05"
-              value={art?.scale ?? 1}
-              onChange={(e) => setArtField("scale", Number(e.target.value))}
-              className="accent-blue-500" />
-          </label>
+          {/* posição X */}
+          <Slider
+            label="Horizontal"
+            value={offsetX}
+            display={`${offsetX > 0 ? "+" : ""}${offsetX}%`}
+            min={-80} max={80} step={1}
+            onChange={(v) => setArtField("offsetX", v)}
+          />
 
-          <button
-            onClick={() => { setArtField("offsetX", 0); setArtField("offsetY", 0); setArtField("scale", 1); }}
-            className="mt-1 rounded border border-neutral-700 py-1 text-[10px] text-neutral-500 hover:border-neutral-500 hover:text-neutral-300 transition-colors"
-          >
-            Resetar posição
-          </button>
+          {/* posição Y */}
+          <Slider
+            label="Vertical"
+            value={offsetY}
+            display={`${offsetY > 0 ? "+" : ""}${offsetY}%`}
+            min={-80} max={80} step={1}
+            onChange={(v) => setArtField("offsetY", v)}
+          />
         </div>
       )}
     </div>
+  );
+}
+
+function Slider({ label, value, display, min, max, step, onChange }: {
+  label: string; value: number; display: string;
+  min: number; max: number; step: number;
+  onChange: (v: number) => void;
+}) {
+  return (
+    <label className="flex flex-col gap-1">
+      <div className="flex items-center justify-between">
+        <span className="text-[10px]" style={{ color: "var(--text-3)" }}>{label}</span>
+        <span className="font-mono text-[10px]" style={{ color: "var(--text-2)" }}>{display}</span>
+      </div>
+      <input
+        type="range" min={min} max={max} step={step} value={value}
+        onChange={(e) => onChange(Number(e.target.value))}
+        className="w-full cursor-pointer accent-blue-500"
+        style={{ accentColor: "#3b82f6" }}
+      />
+    </label>
   );
 }

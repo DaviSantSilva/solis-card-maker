@@ -76,8 +76,10 @@ export const CardCanvas = forwardRef<
               alt=""
               style={{
                 width: "100%", height: "100%",
-                objectFit: "cover", objectPosition: "top",
-                transformOrigin: "center center",
+                objectFit: "cover",
+                /* objectPosition omitido — padrão "50% 50%" (centro)
+                   permite que translate() e scale() controlem o crop livremente */
+                transformOrigin: "50% 50%",
                 transform: `translate(${card.art.offsetX ?? 0}%, ${card.art.offsetY ?? 0}%) scale(${card.art.scale ?? 1})`,
               }}
             />
