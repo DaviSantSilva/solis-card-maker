@@ -60,15 +60,25 @@ export interface VariantMeta {
   companyId:    string;
 }
 
+/** Metadados de filtro por carta — consumidos pela galeria, ignorados pelo TTS */
+export interface CardMeta {
+  cardType:  string;
+  rarity:    string;
+  cost:      number | "X";
+  companyId: string;
+}
+
 export interface PublicationManifest {
   version:      number;
   published_at: string;
   /** slug → URL da imagem renderizada (consumido pelo TTS) */
   cards: Record<string, string>;
-  /** slug → nome real da carta (consumido pela galeria) */
+  /** slug → nome real da carta */
   names: Record<string, string>;
-  /** slug → metadados de variante — só presente em cartas iniciais com variante */
+  /** slug → metadados de variante */
   variants: Record<string, VariantMeta>;
+  /** slug → metadados para filtro na galeria */
+  meta: Record<string, CardMeta>;
 }
 
 export interface PublicationCardRow {

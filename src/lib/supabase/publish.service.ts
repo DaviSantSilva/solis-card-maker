@@ -191,12 +191,26 @@ export async function publishCards(
     }
   });
 
+  const manifestMeta: Record<string, import("./db.types").CardMeta> = {};
+  cards.forEach((c) => {
+    const s = c.variantGroup && c.companyId
+      ? `${c.variantGroup}-${c.companyId}`
+      : toSlug(c.name);
+    manifestMeta[s] = {
+      cardType:  c.cardType,
+      rarity:    c.rarity,
+      cost:      c.cost,
+      companyId: c.companyId ?? "",
+    };
+  });
+
   const manifest: PublicationManifest = {
     version:      pubVersion,
     published_at: new Date().toISOString(),
     cards:        manifestCards,
     names:        manifestNames,
     variants:     manifestVariants,
+    meta:         manifestMeta,
   };
 
   const manifestUrl = await uploadManifest(manifest);
