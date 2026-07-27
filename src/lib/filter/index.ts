@@ -79,9 +79,12 @@ export function filterCards(cards: SolisCard[], f: FilterCriteria): SolisCard[] 
     // custo
     if (f.costs.length && !f.costs.includes(card.cost)) return false;
 
-    // tags — pelo menos uma das tags selecionadas deve estar na carta
+    // tags — considera TODOS os ícones da coluna esquerda (caixa 2 + caixas 3-5)
     if (f.tags.length) {
-      const cardTags = (card.tagIcons ?? []).filter(Boolean) as IconKey[];
+      const cardTags: IconKey[] = [
+        card.categoryIcon,
+        ...((card.tagIcons ?? []).filter(Boolean) as IconKey[]),
+      ];
       if (!f.tags.some((t) => cardTags.includes(t))) return false;
     }
 
