@@ -201,6 +201,7 @@ export async function publishCards(
       rarity:    c.rarity,
       cost:      c.cost,
       companyId: c.companyId ?? "",
+      quantity:  c.quantity ?? 1,
     };
   });
 

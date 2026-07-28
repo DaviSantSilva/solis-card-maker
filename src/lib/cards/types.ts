@@ -123,4 +123,11 @@ export interface SolisCard {
    * Ver src/lib/cards/companies.ts.
    */
   companyId: string;
+
+  /**
+   * Número de cópias desta carta no deck.
+   * O TTS lê este valor do manifest e instancia a quantidade correta.
+   * Padrão: 1 se ausente.
+   */
+  quantity?: number;
 }

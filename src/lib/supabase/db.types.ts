@@ -66,6 +66,8 @@ export interface CardMeta {
   rarity:    string;
   cost:      number | "X";
   companyId: string;
+  /** Número de cópias desta carta — lido pelo script Lua do TTS */
+  quantity:  number;
 }
 
 export interface PublicationManifest {
