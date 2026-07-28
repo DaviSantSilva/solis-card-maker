@@ -119,6 +119,7 @@ function LocalizationModal({
 }) {
   // locale → URL da imagem (undefined = carregando, null = não disponível)
   const [urls, setUrls] = useState<Record<string, string | null>>({});
+  const [lightbox, setLightbox] = useState<{ url: string; label: string } | null>(null);
 
   useEffect(() => {
     if (!open) return;
@@ -205,7 +206,9 @@ function LocalizationModal({
                 ) : url ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img src={url} alt={`${label} — ${ptName}`}
-                    className="h-full w-full object-cover" loading="lazy" />
+                    className="h-full w-full cursor-zoom-in object-cover"
+                    loading="lazy"
+                    onClick={() => setLightbox({ url, label: `${flag} ${label}` })} />
                 ) : (
                   /* não disponível */
                   <div className="flex h-full flex-col items-center justify-center gap-1">
@@ -239,6 +242,57 @@ function LocalizationModal({
     </div>,
     document.body
   );
+
+  // Lightbox fullscreen
+  if (lightbox && typeof document !== "undefined") {
+    const portal = createPortal(
+      <div
+        className="fixed inset-0 z-[300] flex cursor-zoom-out items-center justify-center"
+        style={{ background: "rgba(0,0,0,0.95)" }}
+        onClick={() => setLightbox(null)}
+      >
+        {/* label */}
+        <div className="absolute left-0 right-0 top-0 flex items-center justify-between px-6 py-4">
+          <span className="text-sm font-medium" style={{ color: "var(--text-2)" }}>
+            {ptName} — {lightbox!.label}
+          </span>
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={(e) => { e.stopPropagation(); if (lightbox) downloadImage(lightbox.url, `${slug}-${lightbox.label.split(" ").pop()?.toLowerCase()}.png`); }}
+              className="flex items-center gap-2 rounded-lg border px-3 py-1.5 text-xs transition-colors hover:border-blue-500 hover:text-white"
+              style={{ borderColor: "var(--border)", color: "var(--text-2)" }}
+            >
+              <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M8 2v8m0 0L5 7m3 3 3-3M2 12h12"/>
+              </svg>
+              Baixar
+            </button>
+            <button
+              type="button"
+              onClick={() => setLightbox(null)}
+              className="flex h-8 w-8 items-center justify-center rounded-lg border transition-colors hover:border-neutral-500 hover:text-white"
+              style={{ borderColor: "var(--border)", color: "var(--text-3)" }}
+            >
+              ✕
+            </button>
+          </div>
+        </div>
+
+        {/* imagem */}
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={lightbox!.url ?? ""}
+          alt={lightbox!.label ?? ""}
+          className="max-h-[90vh] max-w-[90vw] rounded-xl object-contain shadow-2xl"
+          style={{ boxShadow: "0 32px 64px rgba(0,0,0,.8)" }}
+          onClick={(e) => e.stopPropagation()}
+        />
+      </div>,
+      document.body
+    );
+    return <>{portal}{open && typeof document !== "undefined" && createPortal(<></>, document.body)}</>;
+  }
 }
 
 /* ── card tile (carta individual) ── */
