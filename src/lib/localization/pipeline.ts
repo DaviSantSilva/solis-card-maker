@@ -12,12 +12,9 @@ interface TranslationFields {
   flavor_text:  string | null;
 }
 
-/* ── chamadas às API routes ─────────────────────────────────── */
+/* ── chamada ao DeepL via API route ─────────────────────────── */
 
-async function callDeepL(
-  texts: string[],
-  locale: Locale
-): Promise<string[]> {
+async function callDeepL(texts: string[], locale: Locale): Promise<string[]> {
   const res = await fetch("/api/translate/deepl", {
     method:  "POST",
     headers: { "Content-Type": "application/json" },
@@ -33,25 +30,6 @@ async function callDeepL(
   return data.translations as string[];
 }
 
-async function callClaude(
-  pt:     TranslationFields,
-  deepl:  TranslationFields,
-  locale: Locale
-): Promise<TranslationFields & { confidence: number; notes: string }> {
-  const res = await fetch("/api/translate/validate", {
-    method:  "POST",
-    headers: { "Content-Type": "application/json" },
-    body:    JSON.stringify({ pt, deepl, locale }),
-  });
-
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({ error: `HTTP ${res.status}` }));
-    throw new Error(err.error ?? "Falha na validação");
-  }
-
-  return res.json();
-}
-
 /* ── pipeline por locale ─────────────────────────────────────── */
 
 async function translateLocale(
@@ -61,11 +39,9 @@ async function translateLocale(
   locale:    Locale,
   store:     ReturnType<typeof usePipelineStore.getState>
 ): Promise<void> {
-  // 1. Inicia status no store e no banco
   store.updateLocaleStatus(cardId, locale, "translating");
   await updateTranslationStatus(cardId, locale, "translating");
 
-  // textos PT para traduzir (null → string vazia para o DeepL, restaurado depois)
   const ptFields: TranslationFields = {
     name:         card.name,
     subtitle:     card.subtitle,
@@ -80,39 +56,23 @@ async function translateLocale(
     ptFields.flavor_text ?? "",
   ];
 
-  // 2. DeepL
+  // 1. DeepL
   store.addStep(cardId, { label: "Traduzindo com DeepL", status: "running", locale });
   const deepLTexts = await callDeepL(textsToTranslate, locale);
-
-  const deepLFields: TranslationFields = {
-    name:         deepLTexts[0],
-    subtitle:     deepLTexts[1],
-    ability_text: deepLTexts[2],
-    flavor_text:  ptFields.flavor_text ? deepLTexts[3] : null,
-  };
   store.addStep(cardId, { label: "DeepL concluído", status: "done", locale });
 
-  // 3. Claude — validação com glossário
-  store.addStep(cardId, { label: "Validando com Claude", status: "running", locale });
-  const validated = await callClaude(ptFields, deepLFields, locale);
-  store.addStep(cardId, {
-    label:  `Claude validou (confiança: ${Math.round((validated.confidence ?? 0) * 100)}%)`,
-    status: "done",
-    locale,
-  });
-
-  // 4. Salva no banco
+  // 2. Salva direto no banco (sem validação Claude por enquanto)
   store.addStep(cardId, { label: "Salvando no banco", status: "running", locale });
   await saveTranslation(cardId, locale, {
-    name:              validated.name,
-    subtitle:          validated.subtitle,
-    ability_text:      validated.ability_text,
-    flavor_text:       validated.flavor_text ?? undefined,
+    name:              deepLTexts[0],
+    subtitle:          deepLTexts[1],
+    ability_text:      deepLTexts[2],
+    flavor_text:       ptFields.flavor_text ? deepLTexts[3] : undefined,
     status:            "done",
     source_version_id: versionId,
     is_stale:          false,
-    confidence:        validated.confidence,
-    pipeline_notes:    validated.notes,
+    confidence:        undefined,
+    pipeline_notes:    "Traduzido automaticamente via DeepL",
     translated_by:     "auto",
     is_reviewed:       false,
   });
