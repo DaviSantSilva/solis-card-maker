@@ -151,6 +151,13 @@ export function EditorForm() {
           <SelectInput<string> value={activeCard.companyId}
             onChange={(v) => setField("companyId", v)} options={COMPANY_OPTIONS} />
         </FieldRow>
+
+        <FieldRow label="Cópias no deck">
+          <NumberInput
+            value={activeCard.quantity ?? 1}
+            onChange={(v) => setField("quantity", Math.max(1, v))}
+            min={1} max={99} />
+        </FieldRow>
       </div>
     </div>
     </>
