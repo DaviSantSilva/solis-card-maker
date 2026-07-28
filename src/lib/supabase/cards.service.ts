@@ -2,6 +2,11 @@ import { getSupabase } from "./client";
 import { uploadCardImage, getPublicImageUrl } from "./storage.service";
 import { SolisCard } from "@/lib/cards/types";
 import { LatestCardVersionRow } from "./db.types";
+import {
+  initializePendingTranslations,
+  markTranslationsStale,
+  translatableFieldsChanged,
+} from "./translations.service";
 
 function toSlug(name: string): string {
   return name
@@ -131,6 +136,36 @@ export async function saveCard(
     throw new Error(`Erro ao salvar versão: ${versionError?.message}`);
   }
   const versionRow = (versionRows as Array<{ id: string }>)[0];
+
+  // ── Localização: detecção automática de staleness ──────────
+  // Carta nova (version === 1): inicializa registros 'pending' para os 5 idiomas.
+  // Carta existente: compara campos traduzíveis com a versão anterior.
+  // Se mudaram → marca todas as traduções 'done' como 'stale'.
+  try {
+    if (version === 1) {
+      // Primeira versão — inicializa pending para todos os idiomas
+      await initializePendingTranslations(cardRow.id, versionRow.id);
+    } else {
+      // Busca a versão anterior para comparar
+      const { data: prevRows } = await db
+        .from("card_versions")
+        .select("data")
+        .eq("card_id", cardRow.id)
+        .order("version", { ascending: false })
+        .limit(2);
+
+      const prevVersions = prevRows as Array<{ data: Record<string, unknown> }> | null;
+      if (prevVersions && prevVersions.length >= 2) {
+        const prevData = prevVersions[1].data;
+        if (translatableFieldsChanged(prevData, dataToStore as Record<string, unknown>)) {
+          await markTranslationsStale(cardRow.id);
+        }
+      }
+    }
+  } catch (e) {
+    // Erros de localização não devem bloquear o save da carta
+    console.warn("Aviso: falha ao processar localização pós-save:", e);
+  }
 
   return {
     ...card,
