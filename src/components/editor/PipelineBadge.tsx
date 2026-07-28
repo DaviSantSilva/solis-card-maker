@@ -1,5 +1,6 @@
 "use client";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import {
   usePipelineStore,
   getGlobalStatus,
@@ -151,36 +152,50 @@ function JobRow({ job, onToggle }: { job: PipelineJob; onToggle: () => void }) {
 /* ── componente principal ── */
 export function PipelineBadge() {
   const { jobs, setExpanded, clearCompleted } = usePipelineStore();
-  const [open, setOpen] = useState(false);
-  const ref             = useRef<HTMLDivElement>(null);
+  const [open, setOpen]           = useState(false);
+  const [dropPos, setDropPos]     = useState({ top: 0, left: 0 });
+  const btnRef                    = useRef<HTMLButtonElement>(null);
+  const dropRef                   = useRef<HTMLDivElement>(null);
 
   const jobList      = Object.values(jobs);
   const globalStatus = getGlobalStatus(jobs);
   const badgeColor   = GLOBAL_COLOR[globalStatus];
-  const hasJobs      = jobList.length > 0;
   const completedCount = jobList.filter((j) =>
     LOCALES.every((l) => ["done", "stale", "error"].includes(j.locales[l].status))
   ).length;
+
+  /* calcula posição do dropdown com base no botão */
+  const openDropdown = useCallback(() => {
+    if (btnRef.current) {
+      const rect = btnRef.current.getBoundingClientRect();
+      setDropPos({
+        top:  rect.bottom + 8,
+        left: rect.left + rect.width / 2,
+      });
+    }
+    setOpen((o) => !o);
+  }, []);
 
   /* fecha ao clicar fora */
   useEffect(() => {
     if (!open) return;
     const h = (e: MouseEvent) => {
-      if (!ref.current?.contains(e.target as Node)) setOpen(false);
+      if (
+        !btnRef.current?.contains(e.target as Node) &&
+        !dropRef.current?.contains(e.target as Node)
+      ) setOpen(false);
     };
     document.addEventListener("mousedown", h);
     return () => document.removeEventListener("mousedown", h);
   }, [open]);
 
-  /* não renderiza enquanto não há jobs na sessão E está idle */
-  // Badge sempre visível — mostra estado idle quando não há jobs ativos
-
   return (
-    <div ref={ref} className="relative">
+    <>
       {/* botão com ícone de tradutor */}
       <button
+        ref={btnRef}
         type="button"
-        onClick={() => setOpen((o) => !o)}
+        onClick={openDropdown}
         className="relative flex h-8 w-8 items-center justify-center rounded-lg border transition-colors"
         style={{
           borderColor: open ? "var(--accent)" : "var(--border)",
@@ -189,27 +204,21 @@ export function PipelineBadge() {
         }}
         title="Pipeline de tradução"
       >
-        {/* ícone de globe/tradução */}
         <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
           <circle cx="12" cy="12" r="10"/>
           <path strokeLinecap="round" d="M2 12h20M12 2a15.3 15.3 0 010 20M12 2a15.3 15.3 0 000 20"/>
         </svg>
 
-        {/* badge de status — sobrepõe o canto superior direito */}
         {globalStatus !== "idle" ? (
           <span
             className={`absolute -right-1 -top-1 flex h-3.5 w-3.5 items-center justify-center rounded-full border-2 text-[7px] font-black text-white ${
               globalStatus === "translating" ? "animate-pulse" : ""
             }`}
-            style={{
-              background:  badgeColor,
-              borderColor: "var(--bg-base)",
-            }}
+            style={{ background: badgeColor, borderColor: "var(--bg-base)" }}
           >
             {globalStatus === "translating" ? "⟳" : globalStatus === "done" ? "✓" : "✗"}
           </span>
         ) : (
-          /* idle: dot cinza discreto */
           <span
             className="absolute -right-1 -top-1 h-2.5 w-2.5 rounded-full border-2"
             style={{ background: "#4a5168", borderColor: "var(--bg-base)" }}
@@ -217,11 +226,15 @@ export function PipelineBadge() {
         )}
       </button>
 
-      {/* dropdown */}
-      {open && (
+      {/* dropdown via Portal — escapa do overflow:hidden do editor */}
+      {open && typeof document !== "undefined" && createPortal(
         <div
-          className="absolute left-1/2 top-full z-50 mt-2 w-80 -translate-x-1/2 overflow-hidden rounded-xl border shadow-2xl"
+          ref={dropRef}
+          className="fixed z-[200] w-80 overflow-hidden rounded-xl border shadow-2xl"
           style={{
+            top:         dropPos.top,
+            left:        dropPos.left,
+            transform:   "translateX(-50%)",
             borderColor: "var(--border)",
             background:  "var(--bg-overlay)",
             boxShadow:   "0 24px 48px rgba(0,0,0,.6)",
@@ -273,8 +286,9 @@ export function PipelineBadge() {
               ))
             )}
           </div>
-        </div>
+        </div>,
+        document.body
       )}
-    </div>
+    </>
   );
 }
