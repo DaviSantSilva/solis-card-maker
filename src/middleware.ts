@@ -31,7 +31,7 @@ export function middleware(req: NextRequest) {
 
 export const config = {
   matcher: [
-    // Protege todas as rotas exceto assets estáticos e API de tradução
-    "/((?!_next/static|_next/image|favicon.ico|api/translate).*)",
+    // Protege todas as rotas exceto assets estáticos, login e APIs públicas
+    "/((?!_next/static|_next/image|favicon.ico|api/translate|api/auth).*)",
   ],
 };
