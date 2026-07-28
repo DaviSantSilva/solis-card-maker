@@ -243,55 +243,60 @@ function LocalizationModal({
     document.body
   );
 
-  // Lightbox fullscreen
-  if (lightbox && typeof document !== "undefined") {
-    const portal = createPortal(
-      <div
-        className="fixed inset-0 z-[300] flex items-center justify-center" style={{ background: "rgba(0,0,0,0.95)", cursor: "zoom-out" }}
-        onClick={() => setLightbox(null)}
-      >
-        {/* label */}
-        <div className="absolute left-0 right-0 top-0 flex items-center justify-between px-6 py-4">
-          <span className="text-sm font-medium" style={{ color: "var(--text-2)" }}>
-            {ptName} — {lightbox!.label}
-          </span>
-          <div className="flex items-center gap-3">
-            <button
-              type="button"
-              onClick={(e) => { e.stopPropagation(); if (lightbox) downloadImage(lightbox.url, `${slug}-${lightbox.label.split(" ").pop()?.toLowerCase()}.png`); }}
-              className="flex cursor-pointer items-center gap-2 rounded-lg border px-3 py-1.5 text-xs transition-colors hover:border-blue-500 hover:text-white"
-              style={{ borderColor: "var(--border)", color: "var(--text-2)" }}
-            >
-              <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M8 2v8m0 0L5 7m3 3 3-3M2 12h12"/>
-              </svg>
-              Baixar
-            </button>
-            <button
-              type="button"
-              onClick={() => setLightbox(null)}
-              className="flex h-8 w-8 items-center justify-center rounded-lg border transition-colors hover:border-neutral-500 hover:text-white"
-              style={{ borderColor: "var(--border)", color: "var(--text-3)" }}
-            >
-              ✕
-            </button>
+  // O lightbox e o modal principal são renderizados simultaneamente —
+  // o lightbox (z-[300]) aparece por cima sem fechar o modal (z-[200])
+  return (
+    <>
+      {/* modal principal já renderizado via createPortal acima */}
+      {/* lightbox fullscreen — só aparece quando uma imagem é clicada */}
+      {lightbox && typeof document !== "undefined" && createPortal(
+        <div
+          className="fixed inset-0 z-[300] flex items-center justify-center"
+          style={{ background: "rgba(0,0,0,0.95)", cursor: "zoom-out" }}
+          onClick={() => setLightbox(null)}
+        >
+          {/* header */}
+          <div className="absolute left-0 right-0 top-0 flex items-center justify-between px-6 py-4">
+            <span className="text-sm font-medium" style={{ color: "var(--text-2)" }}>
+              {ptName} — {lightbox!.label}
+            </span>
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={(e) => { e.stopPropagation(); downloadImage(lightbox!.url, `${slug}-${lightbox!.label.split(" ").pop()?.toLowerCase()}.png`); }}
+                className="flex cursor-pointer items-center gap-2 rounded-lg border px-3 py-1.5 text-xs transition-colors hover:border-blue-500 hover:text-white"
+                style={{ borderColor: "var(--border)", color: "var(--text-2)" }}
+              >
+                <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M8 2v8m0 0L5 7m3 3 3-3M2 12h12"/>
+                </svg>
+                Baixar
+              </button>
+              <button
+                type="button"
+                onClick={() => setLightbox(null)}
+                className="flex h-8 w-8 items-center justify-center rounded-lg border transition-colors hover:border-neutral-500 hover:text-white"
+                style={{ borderColor: "var(--border)", color: "var(--text-3)" }}
+              >
+                ✕
+              </button>
+            </div>
           </div>
-        </div>
 
-        {/* imagem */}
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src={lightbox!.url ?? ""}
-          alt={lightbox!.label ?? ""}
-          className="max-h-[90vh] max-w-[90vw] rounded-xl object-contain shadow-2xl"
-          style={{ boxShadow: "0 32px 64px rgba(0,0,0,.8)" }}
-          onClick={(e) => e.stopPropagation()}
-        />
-      </div>,
-      document.body
-    );
-    return <>{portal}{open && typeof document !== "undefined" && createPortal(<></>, document.body)}</>;
-  }
+          {/* imagem */}
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={lightbox!.url}
+            alt={lightbox!.label}
+            className="max-h-[90vh] max-w-[90vw] rounded-xl object-contain"
+            style={{ boxShadow: "0 32px 64px rgba(0,0,0,.8)", cursor: "default" }}
+            onClick={(e) => e.stopPropagation()}
+          />
+        </div>,
+        document.body
+      )}
+    </>
+  );
 }
 
 /* ── card tile (carta individual) ── */
