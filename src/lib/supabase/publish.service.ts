@@ -21,7 +21,7 @@ function toSlug(name: string): string {
 }
 
 /** Renderiza uma carta como PNG em 864×1234 via html-to-image. */
-async function renderCard(card: SolisCard): Promise<string> {
+async function renderCard(card: SolisCard, locale: string = "pt"): Promise<string> {
   const container = document.createElement("div");
   container.style.cssText =
     "position:fixed;top:-10000px;left:-10000px;width:864px;height:1234px;overflow:hidden;";
@@ -31,7 +31,7 @@ async function renderCard(card: SolisCard): Promise<string> {
 
   // Renderiza e aguarda imagens carregarem
   await new Promise<void>((resolve) => {
-    root.render(React.createElement(CardCanvas, { card, width: 864 }));
+    root.render(React.createElement(CardCanvas, { card, width: 864, locale: locale as "pt" | "en" | "es" | "fr" | "de" | "zh" }));
     setTimeout(() => {
       const imgs = Array.from(container.querySelectorAll("img"));
       Promise.all(
@@ -273,15 +273,17 @@ export async function publishCards(
         // Cria carta localizada substituindo os campos traduzíveis
         const localizedCard: SolisCard = {
           ...card,
-          name:        translation.name         ?? card.name,
-          subtitle:    translation.subtitle      ?? card.subtitle,
-          abilityText: translation.ability_text  ?? card.abilityText,
-          flavorText:  translation.flavor_text   ?? card.flavorText,
+          name:            translation.name         ?? card.name,
+          subtitle:        translation.subtitle      ?? card.subtitle,
+          abilityText:     translation.ability_text  ?? card.abilityText,
+          flavorText:      translation.flavor_text   ?? card.flavorText,
+          // abilityCategory é traduzida via tabela estática dentro do CardCanvas
+          // pelo prop locale — não precisa sobrescrever aqui
         };
 
-        // Renderiza a carta com o texto traduzido
+        // Renderiza com locale para traduzir tipo, raridade e categoria
         onProgress({ total: cards.length, current: cards.indexOf(card) + 1, card: `${card.name} (${locale})` });
-        const dataUrl    = await renderCard(localizedCard);
+        const dataUrl    = await renderCard(localizedCard, locale);
         const renderPath = await uploadCardRender(slug, pubVersion, dataUrl, locale);
 
         localeManifestCards[slug] = getPublicImageUrl(renderPath);
