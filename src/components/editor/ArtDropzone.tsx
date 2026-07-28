@@ -58,7 +58,7 @@ export function ArtDropzone() {
               alt="arte"
               className="absolute inset-0 h-full w-full"
               style={{
-                objectFit: "cover",
+                objectFit: "contain",
                 transformOrigin: "50% 50%",
                 transform: `translate(${offsetX}%, ${offsetY}%) scale(${scale})`,
                 opacity: 0.45,

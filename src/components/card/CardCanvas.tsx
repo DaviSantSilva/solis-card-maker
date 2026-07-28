@@ -87,9 +87,10 @@ export const CardCanvas = forwardRef<
               alt=""
               style={{
                 width: "100%", height: "100%",
-                objectFit: "cover",
-                /* objectPosition omitido — padrão "50% 50%" (centro)
-                   permite que translate() e scale() controlem o crop livremente */
+                /* contain: exibe a imagem inteira sem corte automático.
+                   O usuário usa os sliders de zoom/posição para ajustar.
+                   scale > 1 no slider zooma e começa a cortar, igual ao cover anterior. */
+                objectFit: "contain",
                 transformOrigin: "50% 50%",
                 transform: `translate(${card.art.offsetX ?? 0}%, ${card.art.offsetY ?? 0}%) scale(${card.art.scale ?? 1})`,
               }}
