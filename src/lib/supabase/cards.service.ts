@@ -26,7 +26,7 @@ function rowToCard(row: LatestCardVersionRow): SolisCard {
   if (row.image_path) {
     card.art = { ...(card.art ?? {}), src: getPublicImageUrl(row.image_path) };
   }
-  return { ...card, id: row.id };
+  return { ...card, id: row.id, _cardId: row.card_id };
 }
 
 // ─── Leitura ────────────────────────────────────────────────
@@ -113,9 +113,9 @@ export async function saveCard(
     imagePath = match ? match[1] : null;
   }
 
-  // 4. Serializa sem art.src e insere a versão
+  // 4. Serializa sem art.src e sem campos internos (_cardId)
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const { id: _id, ...rest } = card;
+  const { id: _id, _cardId: __cardId, ...rest } = card;
   const dataToStore = {
     ...rest,
     art: rest.art ? { ...rest.art, src: "" } : undefined,
@@ -169,7 +169,8 @@ export async function saveCard(
 
   return {
     ...card,
-    id: versionRow.id,
+    id:      versionRow.id,
+    _cardId: cardRow.id,
     art: imagePath
       ? { ...(card.art ?? {}), src: getPublicImageUrl(imagePath) }
       : card.art,

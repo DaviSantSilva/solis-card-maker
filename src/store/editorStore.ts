@@ -8,6 +8,7 @@ import {
   saveCard as saveCardToDb,
   deleteCard as deleteCardFromDb,
 } from "@/lib/supabase/cards.service";
+import { translateCard } from "@/lib/localization/pipeline";
 
 function makeId() {
   return `card-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
@@ -136,9 +137,13 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     set({ isLoading: true, dbError: null });
     try {
       const saved = await saveCardToDb(get().activeCard, label);
-      // refaz a biblioteca para garantir consistência com o banco
       const library = await fetchAllCards();
       set({ activeCard: saved, library, isLoading: false });
+
+      // Dispara a pipeline de tradução em background — não bloqueia o editor
+      translateCard(saved, saved.id).catch((e) =>
+        console.warn("Pipeline de tradução falhou:", e)
+      );
     } catch (e) {
       set({ isLoading: false, dbError: (e as Error).message });
     }
