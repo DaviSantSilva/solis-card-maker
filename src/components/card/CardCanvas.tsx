@@ -6,6 +6,12 @@ import { CardFrame } from "./CardFrame";
 import { GameIcon } from "./icons/GameIcon";
 import { ZONES } from "./layout";
 import { getCompany } from "@/lib/cards/companies";
+import {
+  CARD_TYPE_TRANSLATIONS,
+  RARITY_TRANSLATIONS,
+  CATEGORY_TRANSLATIONS,
+} from "@/lib/localization/locales";
+import type { Locale } from "@/lib/localization/locales";
 
 function abs(z: { x: number; y: number; w: number; h: number }) {
   return {
@@ -25,8 +31,8 @@ function abs(z: { x: number; y: number; w: number; h: number }) {
  */
 export const CardCanvas = forwardRef<
   HTMLDivElement,
-  { card: SolisCard; width?: number }
->(function CardCanvas({ card, width = 320 }, ref) {
+  { card: SolisCard; width?: number; locale?: Locale | "pt" }
+>(function CardCanvas({ card, width = 320, locale = "pt" }, ref) {
   const NATIVE_W = 864;
   const NATIVE_H = 1234;
   const scale = width / NATIVE_W;
@@ -34,6 +40,11 @@ export const CardCanvas = forwardRef<
   const tags = card.tagIcons ?? [null, null, null];
   const tagZones = [ZONES.tagBox1, ZONES.tagBox2, ZONES.tagBox3];
   const company = getCompany(card.companyId);
+
+  // Labels estáticos traduzidos pelo locale
+  const typeLabel     = CARD_TYPE_TRANSLATIONS[card.cardType]?.[locale]       ?? theme.label;
+  const rarityLabel   = RARITY_TRANSLATIONS[card.rarity]?.[locale]             ?? RARITY_LABEL[card.rarity];
+  const categoryLabel = CATEGORY_TRANSLATIONS[card.abilityCategory]?.[locale]  ?? card.abilityCategory;
 
   return (
     <div ref={ref} style={{
@@ -157,7 +168,7 @@ export const CardCanvas = forwardRef<
           fontSize: 30, fontWeight: 600, color: "#222",
           paddingLeft: 12, marginTop: 10,
         }}>
-          {card.abilityCategory}
+          {categoryLabel}
         </div>
 
         {/* ── Ícone de habilidade ── */}
@@ -222,9 +233,9 @@ export const CardCanvas = forwardRef<
           display: "flex", alignItems: "center", justifyContent: "center",
           gap: 8, fontSize: 26, fontWeight: 500, color: "#444",
         }}>
-          <span>{CARD_TYPE_THEME[card.cardType].label}</span>
+          <span>{typeLabel}</span>
           <span style={{ color: "#bbb" }}>·</span>
-          <span>{RARITY_LABEL[card.rarity]}</span>
+          <span>{rarityLabel}</span>
         </div>
 
       </div>

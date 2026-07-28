@@ -124,10 +124,12 @@ export interface SolisCard {
    */
   companyId: string;
 
-  /**
-   * Número de cópias desta carta no deck.
-   * O TTS lê este valor do manifest e instancia a quantidade correta.
-   * Padrão: 1 se ausente.
-   */
+  /** Número de cópias desta carta no deck. */
   quantity?: number;
+
+  /**
+   * ID da entidade `cards` no Supabase (não armazenado em card_versions.data).
+   * Preenchido ao carregar do banco. Necessário para criar/atualizar card_translations.
+   */
+  _cardId?: string;
 }
