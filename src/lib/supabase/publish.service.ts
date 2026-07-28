@@ -3,9 +3,11 @@ import React from "react";
 import { createRoot } from "react-dom/client";
 import { toPng } from "html-to-image";
 import { getSupabase } from "./client";
-import { uploadCardRender, uploadManifest, getPublicImageUrl } from "./storage.service";
+import { uploadCardRender, uploadManifest, uploadLocaleManifest, getPublicImageUrl } from "./storage.service";
 import { fetchAllCards } from "./cards.service";
 import { SolisCard } from "@/lib/cards/types";
+import { LOCALES, Locale } from "@/lib/localization/locales";
+import { getTranslationsForCards } from "./translations.service";
 import { CardCanvas } from "@/components/card/CardCanvas";
 import { PublicationManifest } from "./db.types";
 
@@ -101,11 +103,12 @@ export interface PublishProgress {
 }
 
 export interface PublishResult {
-  version:     number;
-  manifestUrl: string;
-  manifest:    PublicationManifest;
-  published:   number; // cartas com render novo
-  unchanged:   number; // cartas reutilizadas da publicação anterior
+  version:        number;
+  manifestUrl:    string;       // manifest PT (URL fixa)
+  localeManifests: Record<string, string>; // locale → URL
+  manifest:       PublicationManifest;
+  published:      number;
+  unchanged:      number;
 }
 
 /**
@@ -235,5 +238,71 @@ export async function publishCards(
     }))
   );
 
-  return { version: pubVersion, manifestUrl, manifest, published, unchanged };
+  // 6. Publica renders e manifests para cada idioma traduzido
+  const localeManifests: Record<string, string> = {};
+
+  // Busca todas as traduções concluídas das cartas publicadas
+  const cardEntityIds = cards.map((c) => c._cardId).filter(Boolean) as string[];
+  const allTranslations: Record<string, Record<string, import("./translations.service").CardTranslation>> = cardEntityIds.length
+    ? await getTranslationsForCards(cardEntityIds).catch(() => ({}))
+    : {};
+
+  for (const locale of LOCALES) {
+    try {
+      const localeManifestCards: Record<string, string>     = {};
+      const localeManifestNames: Record<string, string>     = {};
+      const localeManifestVariants = manifest.variants;
+      const localeManifestMeta     = manifest.meta;
+
+      for (const card of cards) {
+        const slug = card.variantGroup && card.companyId
+          ? `${card.variantGroup}-${card.companyId}`
+          : toSlug(card.name);
+
+        const translation = card._cardId
+          ? allTranslations[card._cardId]?.[locale]
+          : undefined;
+
+        if (!translation) {
+          // Sem tradução → reutiliza render PT como fallback
+          localeManifestCards[slug] = manifestCards[slug];
+          localeManifestNames[slug] = card.name;
+          continue;
+        }
+
+        // Cria carta localizada substituindo os campos traduzíveis
+        const localizedCard: SolisCard = {
+          ...card,
+          name:        translation.name         ?? card.name,
+          subtitle:    translation.subtitle      ?? card.subtitle,
+          abilityText: translation.ability_text  ?? card.abilityText,
+          flavorText:  translation.flavor_text   ?? card.flavorText,
+        };
+
+        // Renderiza a carta com o texto traduzido
+        onProgress({ total: cards.length, current: cards.indexOf(card) + 1, card: `${card.name} (${locale})` });
+        const dataUrl    = await renderCard(localizedCard);
+        const renderPath = await uploadCardRender(slug, pubVersion, dataUrl, locale);
+
+        localeManifestCards[slug] = getPublicImageUrl(renderPath);
+        localeManifestNames[slug] = translation.name ?? card.name;
+      }
+
+      const localeManifest: PublicationManifest = {
+        version:      pubVersion,
+        published_at: new Date().toISOString(),
+        cards:        localeManifestCards,
+        names:        localeManifestNames,
+        variants:     localeManifestVariants,
+        meta:         localeManifestMeta,
+      };
+
+      const localeManifestUrl = await uploadLocaleManifest(locale, localeManifest);
+      localeManifests[locale] = localeManifestUrl;
+    } catch (e) {
+      console.warn(`Aviso: falha ao publicar idioma ${locale}:`, e);
+    }
+  }
+
+  return { version: pubVersion, manifestUrl, localeManifests, manifest, published, unchanged };
 }
