@@ -117,13 +117,13 @@ function LocalizationModal({
   slug: string; ptName: string; ptUrl: string;
   open: boolean; onClose: () => void;
 }) {
-  // locale → URL da imagem (undefined = carregando, null = não disponível)
-  const [urls, setUrls] = useState<Record<string, string | null>>({});
+  const [urls, setUrls]         = useState<Record<string, string | null>>({});
   const [lightbox, setLightbox] = useState<{ url: string; label: string } | null>(null);
 
   useEffect(() => {
     if (!open) return;
     setUrls({});
+    setLightbox(null);
 
     LOCALES.forEach(async (locale) => {
       try {
@@ -140,132 +140,120 @@ function LocalizationModal({
     });
   }, [open, slug]);
 
-  if (!open || typeof document === "undefined") return null;
+  if (typeof document === "undefined") return null;
 
-  const allLocales: { key: string; label: string; flag: string; url: string | null | undefined }[] = [
-    { key: "pt", label: "Português", flag: "🇧🇷", url: ptUrl },
+  const allLocales = [
+    { key: "pt", label: "Português", flag: "🇧🇷", url: ptUrl as string | null | undefined },
     ...LOCALES.map((l) => ({ key: l, label: LOCALE_LABEL[l], flag: LOCALE_FLAG[l], url: urls[l] })),
   ];
 
-  return createPortal(
-    <div className="fixed inset-0 z-[200] flex items-center justify-center p-4"
-      onClick={onClose}>
-      <div className="absolute inset-0 backdrop-blur-sm" style={{ background: "rgba(0,0,0,0.7)" }} />
-
-      <div
-        className="relative w-full max-w-4xl overflow-hidden rounded-2xl border shadow-2xl"
-        style={{ background: "var(--bg-overlay)", borderColor: "var(--border)",
-                 boxShadow: "0 32px 64px rgba(0,0,0,.7)" }}
-        onClick={(e) => e.stopPropagation()}
-      >
-        {/* header */}
-        <div className="flex items-center justify-between border-b px-6 py-4"
-          style={{ borderColor: "var(--border)" }}>
-          <div className="flex items-center gap-2">
-            <GlobeIcon className="h-4 w-4" style={{ color: "var(--text-3)" } as React.CSSProperties} />
-            <p className="text-sm font-semibold" style={{ color: "var(--text-1)" }}>
-              {ptName} — Localizações
-            </p>
-          </div>
-          <button onClick={onClose}
-            className="flex h-7 w-7 items-center justify-center rounded-lg transition-colors"
-            style={{ color: "var(--text-3)" }}
-            onMouseOver={(e) => (e.currentTarget.style.color = "var(--text-1)")}
-            onMouseOut={(e)  => (e.currentTarget.style.color = "var(--text-3)")}>
-            ✕
-          </button>
-        </div>
-
-        {/* grid de localizações */}
-        <div className="grid grid-cols-2 gap-5 overflow-y-auto p-6 sm:grid-cols-3 lg:grid-cols-6"
-          style={{ maxHeight: "75vh" }}>
-          {allLocales.map(({ key, label, flag, url }) => (
-            <div key={key} className="flex flex-col gap-2">
-              {/* header do locale */}
-              <div className="flex items-center gap-1.5">
-                <span className="text-base">{flag}</span>
-                <span className="text-[10px] font-semibold uppercase tracking-wide"
-                  style={{ color: "var(--text-3)" }}>
-                  {label}
-                </span>
-              </div>
-
-              {/* imagem */}
-              <div className="relative overflow-hidden rounded-xl"
-                style={{ aspectRatio: "864/1234", background: "var(--bg-raised)" }}>
-                {url === undefined ? (
-                  /* carregando */
-                  <div className="flex h-full items-center justify-center">
-                    <svg className="h-5 w-5 animate-spin" style={{ color: "var(--text-3)" }}
-                      fill="none" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10"
-                        stroke="currentColor" strokeWidth="3"/>
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"/>
-                    </svg>
-                  </div>
-                ) : url ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={url} alt={`${label} — ${ptName}`}
-                    className="h-full w-full object-cover" style={{ cursor: "zoom-in" }}
-                    loading="lazy"
-                    onClick={() => setLightbox({ url, label: `${flag} ${label}` })} />
-                ) : (
-                  /* não disponível */
-                  <div className="flex h-full flex-col items-center justify-center gap-1">
-                    <span className="text-xl" style={{ color: "var(--text-3)" }}>—</span>
-                    <span className="text-[9px]" style={{ color: "var(--text-3)" }}>
-                      Não publicada
-                    </span>
-                  </div>
-                )}
-              </div>
-
-              {/* botão de download */}
-              {url && (
-                <button
-                  type="button"
-                  onClick={() => downloadImage(url, `${slug}-${key}.png`)}
-                  className="flex items-center justify-center gap-1.5 rounded-lg border py-1.5 text-[10px] font-medium transition-all hover:border-blue-500 hover:text-white"
-                  style={{ borderColor: "var(--border)", color: "var(--text-2)" }}>
-                  <svg className="h-3 w-3" fill="none" viewBox="0 0 16 16"
-                    stroke="currentColor" strokeWidth={2}>
-                    <path strokeLinecap="round" strokeLinejoin="round"
-                      d="M8 2v8m0 0L5 7m3 3 3-3M2 12h12"/>
-                  </svg>
-                  Baixar
-                </button>
-              )}
-            </div>
-          ))}
-        </div>
-      </div>
-    </div>,
-    document.body
-  );
-
-  // O lightbox e o modal principal são renderizados simultaneamente —
-  // o lightbox (z-[300]) aparece por cima sem fechar o modal (z-[200])
+  // Um único return renderiza o modal e o lightbox como dois portals simultâneos.
+  // O segundo `return` anterior era código morto — nunca executava.
   return (
     <>
-      {/* modal principal já renderizado via createPortal acima */}
-      {/* lightbox fullscreen — só aparece quando uma imagem é clicada */}
-      {lightbox && typeof document !== "undefined" && createPortal(
+      {/* ── modal principal ── */}
+      {open && createPortal(
+        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4"
+          onClick={onClose}>
+          <div className="absolute inset-0 backdrop-blur-sm" style={{ background: "rgba(0,0,0,0.7)" }} />
+
+          <div
+            className="relative w-full max-w-4xl overflow-hidden rounded-2xl border shadow-2xl"
+            style={{ background: "var(--bg-overlay)", borderColor: "var(--border)",
+                     boxShadow: "0 32px 64px rgba(0,0,0,.7)" }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* header */}
+            <div className="flex items-center justify-between border-b px-6 py-4"
+              style={{ borderColor: "var(--border)" }}>
+              <div className="flex items-center gap-2">
+                <GlobeIcon className="h-4 w-4" style={{ color: "var(--text-3)" } as React.CSSProperties} />
+                <p className="text-sm font-semibold" style={{ color: "var(--text-1)" }}>
+                  {ptName} — Localizações
+                </p>
+              </div>
+              <button onClick={onClose}
+                className="flex h-7 w-7 cursor-pointer items-center justify-center rounded-lg transition-colors"
+                style={{ color: "var(--text-3)" }}
+                onMouseOver={(e) => (e.currentTarget.style.color = "var(--text-1)")}
+                onMouseOut={(e)  => (e.currentTarget.style.color = "var(--text-3)")}>
+                ✕
+              </button>
+            </div>
+
+            {/* grid */}
+            <div className="grid grid-cols-2 gap-5 overflow-y-auto p-6 sm:grid-cols-3 lg:grid-cols-6"
+              style={{ maxHeight: "75vh" }}>
+              {allLocales.map(({ key, label, flag, url }) => (
+                <div key={key} className="flex flex-col gap-2">
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-base">{flag}</span>
+                    <span className="text-[10px] font-semibold uppercase tracking-wide"
+                      style={{ color: "var(--text-3)" }}>{label}</span>
+                  </div>
+
+                  <div className="relative overflow-hidden rounded-xl"
+                    style={{ aspectRatio: "864/1234", background: "var(--bg-raised)" }}>
+                    {url === undefined ? (
+                      <div className="flex h-full items-center justify-center">
+                        <svg className="h-5 w-5 animate-spin" style={{ color: "var(--text-3)" }}
+                          fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3"/>
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"/>
+                        </svg>
+                      </div>
+                    ) : url ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={url} alt={`${label} — ${ptName}`}
+                        className="h-full w-full object-cover"
+                        style={{ cursor: "zoom-in" }}
+                        loading="lazy"
+                        onClick={() => setLightbox({ url, label: `${flag} ${label}` })} />
+                    ) : (
+                      <div className="flex h-full flex-col items-center justify-center gap-1">
+                        <span className="text-xl" style={{ color: "var(--text-3)" }}>—</span>
+                        <span className="text-[9px]" style={{ color: "var(--text-3)" }}>Não publicada</span>
+                      </div>
+                    )}
+                  </div>
+
+                  {url && (
+                    <button
+                      type="button"
+                      onClick={() => downloadImage(url, `${slug}-${key}.png`)}
+                      className="flex items-center justify-center gap-1.5 rounded-lg border py-1.5 text-[10px] font-medium transition-all hover:border-blue-500 hover:text-white"
+                      style={{ borderColor: "var(--border)", color: "var(--text-2)", cursor: "pointer" }}>
+                      <svg className="h-3 w-3" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M8 2v8m0 0L5 7m3 3 3-3M2 12h12"/>
+                      </svg>
+                      Baixar
+                    </button>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {/* ── lightbox fullscreen ── renderizado por cima do modal (z-[300] > z-[200]) */}
+      {lightbox && createPortal(
         <div
           className="fixed inset-0 z-[300] flex items-center justify-center"
           style={{ background: "rgba(0,0,0,0.95)", cursor: "zoom-out" }}
           onClick={() => setLightbox(null)}
         >
-          {/* header */}
           <div className="absolute left-0 right-0 top-0 flex items-center justify-between px-6 py-4">
             <span className="text-sm font-medium" style={{ color: "var(--text-2)" }}>
-              {ptName} — {lightbox!.label}
+              {ptName} — {lightbox.label}
             </span>
             <div className="flex items-center gap-3">
               <button
                 type="button"
-                onClick={(e) => { e.stopPropagation(); downloadImage(lightbox!.url, `${slug}-${lightbox!.label.split(" ").pop()?.toLowerCase()}.png`); }}
-                className="flex cursor-pointer items-center gap-2 rounded-lg border px-3 py-1.5 text-xs transition-colors hover:border-blue-500 hover:text-white"
-                style={{ borderColor: "var(--border)", color: "var(--text-2)" }}
+                onClick={(e) => { e.stopPropagation(); downloadImage(lightbox.url, `${slug}-${lightbox.label.split(" ").pop()?.toLowerCase()}.png`); }}
+                className="flex items-center gap-2 rounded-lg border px-3 py-1.5 text-xs transition-colors hover:border-blue-500 hover:text-white"
+                style={{ borderColor: "var(--border)", color: "var(--text-2)", cursor: "pointer" }}
               >
                 <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth={2}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M8 2v8m0 0L5 7m3 3 3-3M2 12h12"/>
@@ -276,18 +264,17 @@ function LocalizationModal({
                 type="button"
                 onClick={() => setLightbox(null)}
                 className="flex h-8 w-8 items-center justify-center rounded-lg border transition-colors hover:border-neutral-500 hover:text-white"
-                style={{ borderColor: "var(--border)", color: "var(--text-3)" }}
+                style={{ borderColor: "var(--border)", color: "var(--text-3)", cursor: "pointer" }}
               >
                 ✕
               </button>
             </div>
           </div>
 
-          {/* imagem */}
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
-            src={lightbox!.url}
-            alt={lightbox!.label}
+            src={lightbox.url}
+            alt={lightbox.label}
             className="max-h-[90vh] max-w-[90vw] rounded-xl object-contain"
             style={{ boxShadow: "0 32px 64px rgba(0,0,0,.8)", cursor: "default" }}
             onClick={(e) => e.stopPropagation()}
