@@ -6,6 +6,7 @@ import { EditorForm } from "@/components/editor/EditorForm";
 import { CardLibrary } from "@/components/editor/CardLibrary";
 import { ExportPanel } from "@/components/editor/ExportPanel";
 import { PublishPanel } from "@/components/editor/PublishPanel";
+import { PipelineBadge } from "@/components/editor/PipelineBadge";
 import { CARD_TYPE_THEME, RARITY_LABEL } from "@/lib/cards/theme";
 
 export default function EditorPage() {
@@ -67,6 +68,7 @@ export default function EditorPage() {
             style={{ background: theme.accent }}>
             {theme.label} · {RARITY_LABEL[activeCard.rarity]}
           </span>
+          <PipelineBadge />
         </div>
 
         {/* carta */}
