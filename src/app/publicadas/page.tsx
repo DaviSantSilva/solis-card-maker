@@ -206,7 +206,7 @@ function LocalizationModal({
                 ) : url ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img src={url} alt={`${label} — ${ptName}`}
-                    className="h-full w-full cursor-zoom-in object-cover"
+                    className="h-full w-full object-cover" style={{ cursor: "zoom-in" }}
                     loading="lazy"
                     onClick={() => setLightbox({ url, label: `${flag} ${label}` })} />
                 ) : (
@@ -247,8 +247,7 @@ function LocalizationModal({
   if (lightbox && typeof document !== "undefined") {
     const portal = createPortal(
       <div
-        className="fixed inset-0 z-[300] flex cursor-zoom-out items-center justify-center"
-        style={{ background: "rgba(0,0,0,0.95)" }}
+        className="fixed inset-0 z-[300] flex items-center justify-center" style={{ background: "rgba(0,0,0,0.95)", cursor: "zoom-out" }}
         onClick={() => setLightbox(null)}
       >
         {/* label */}
@@ -260,7 +259,7 @@ function LocalizationModal({
             <button
               type="button"
               onClick={(e) => { e.stopPropagation(); if (lightbox) downloadImage(lightbox.url, `${slug}-${lightbox.label.split(" ").pop()?.toLowerCase()}.png`); }}
-              className="flex items-center gap-2 rounded-lg border px-3 py-1.5 text-xs transition-colors hover:border-blue-500 hover:text-white"
+              className="flex cursor-pointer items-center gap-2 rounded-lg border px-3 py-1.5 text-xs transition-colors hover:border-blue-500 hover:text-white"
               style={{ borderColor: "var(--border)", color: "var(--text-2)" }}
             >
               <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth={2}>
