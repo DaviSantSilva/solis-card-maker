@@ -67,16 +67,24 @@ export function PublishPanel() {
   );
 
   const { result } = step;
+  const localeEntries = Object.entries(result.localeManifests ?? {});
+
   return (
     <div className="flex items-center gap-3">
-      <div className="flex flex-col">
+      <div className="flex flex-col gap-0.5">
         <span className="text-xs font-semibold" style={{ color: "#10b981" }}>
           v{result.version} · {result.published} novas, {result.unchanged} inalteradas
         </span>
         <a href={result.manifestUrl} target="_blank" rel="noreferrer"
           className="max-w-64 truncate text-[10px]" style={{ color: "var(--text-3)" }}>
-          {result.manifestUrl}
+          🇧🇷 PT: {result.manifestUrl}
         </a>
+        {localeEntries.map(([locale, url]) => (
+          <a key={locale} href={url} target="_blank" rel="noreferrer"
+            className="max-w-64 truncate text-[10px]" style={{ color: "var(--text-3)" }}>
+            {locale.toUpperCase()}: {url}
+          </a>
+        ))}
       </div>
       <button type="button" onClick={reset} className="text-xs" style={{ color: "var(--text-3)" }}>✕</button>
     </div>

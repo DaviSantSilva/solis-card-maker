@@ -175,3 +175,32 @@ export async function initializePendingTranslations(
 
   if (error) throw new Error(`Erro ao inicializar traduções: ${error.message}`);
 }
+
+// ── Publicação ─────────────────────────────────────────────────
+
+/**
+ * Busca todas as traduções concluídas de uma lista de cards.
+ * Retorna um mapa: { cardId: { locale: CardTranslation } }
+ * Usado pelo publishCards para construir as versões localizadas.
+ */
+export async function getTranslationsForCards(
+  cardIds: string[]
+): Promise<Record<string, Record<string, CardTranslation>>> {
+  if (!cardIds.length) return {};
+
+  const { data, error } = await getSupabase()
+    .from("card_translations")
+    .select("*")
+    .in("card_id", cardIds)
+    .eq("status", "done")      // só traduções completas
+    .eq("is_stale", false);    // só traduções atualizadas
+
+  if (error) throw new Error(`Erro ao buscar traduções: ${error.message}`);
+
+  const result: Record<string, Record<string, CardTranslation>> = {};
+  for (const row of (data ?? []) as CardTranslation[]) {
+    if (!result[row.card_id]) result[row.card_id] = {};
+    result[row.card_id][row.locale] = row;
+  }
+  return result;
+}

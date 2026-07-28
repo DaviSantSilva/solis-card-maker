@@ -31,16 +31,17 @@ export async function uploadCardImage(
 
 /**
  * Upload do render final de uma carta (chamado pelo publishCards).
- * Path: renders/{slug}/v{pubVersion}.png — URL nova a cada publicação,
- * assim o TTS não usa cache da versão anterior.
+ * Path: renders/{slug}/{locale}/v{pubVersion}.png
+ * URL nova a cada publicação — evita cache do TTS.
  */
 export async function uploadCardRender(
   slug:       string,
   pubVersion: number,
-  dataUrl:    string
+  dataUrl:    string,
+  locale:     string = "pt"
 ): Promise<string> {
   const { blob, ext } = dataUrlToBlob(dataUrl);
-  const path = `renders/${slug}/v${pubVersion}.${ext}`;
+  const path = `renders/${slug}/${locale}/v${pubVersion}.${ext}`;
 
   const { error } = await getSupabase().storage
     .from(BUCKET)
@@ -66,4 +67,26 @@ export async function uploadManifest(manifest: object): Promise<string> {
 
   if (error) throw new Error(`Erro ao publicar manifest: ${error.message}`);
   return storageUrl("manifest.json");
+}
+
+/**
+ * Faz upload do manifest para um idioma específico.
+ * Path fixo: manifest-{locale}.json (ex: manifest-en.json)
+ * O script Lua do TTS usa a versão correspondente ao idioma do mod.
+ */
+export async function uploadLocaleManifest(
+  locale:   string,
+  manifest: object
+): Promise<string> {
+  const blob = new Blob([JSON.stringify(manifest, null, 2)], {
+    type: "application/json",
+  });
+  const path = `manifest-${locale}.json`;
+
+  const { error } = await getSupabase().storage
+    .from(BUCKET)
+    .upload(path, blob, { contentType: "application/json", upsert: true });
+
+  if (error) throw new Error(`Erro ao publicar manifest-${locale}: ${error.message}`);
+  return storageUrl(path);
 }
