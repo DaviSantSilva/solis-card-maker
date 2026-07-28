@@ -1,8 +1,11 @@
 type CardFrameProps = {
   accent: string;
   accentSoft: string;
+  /** Se true, exibe o swatch colorido no canto inferior esquerdo (apenas cartas iniciais) */
+  showSwatch?: boolean;
+  /** Cor do swatch — cor do jogador dono da carta */
+  swatchColor?: string;
 };
-
 /**
  * Moldura única em SVG, em coordenadas fixas (viewBox 864x1234) medidas a
  * partir do template de margens enviado por Davi. A "identidade visual" de
@@ -12,7 +15,7 @@ type CardFrameProps = {
  * Cores fixas do desenho (cinzas/pretos) ficam hardcoded aqui de propósito:
  * são a "base neutra" da moldura, igual nos dois exemplos de referência.
  */
-export function CardFrame({ accent, accentSoft }: CardFrameProps) {
+export function CardFrame({ accent, accentSoft, showSwatch, swatchColor }: CardFrameProps) {
   const ink = "#3a3d42"; // cor das linhas finas da moldura
   const panel = "#d9dadc"; // cinza claro de preenchimento dos painéis
   const panelDark = "#cfd0d2";
@@ -24,15 +27,19 @@ export function CardFrame({ accent, accentSoft }: CardFrameProps) {
       className="absolute inset-0 h-full w-full"
       xmlns="http://www.w3.org/2000/svg"
     >
-      {/* ===== fundo dos painéis (atrás das linhas) ===== */}
-      <rect x={8} y={8} width={848} height={1218} rx={26} fill={panel} />
+      {/*
+        NÃO colocar rect fill cobrindo o card inteiro aqui.
+        O fundo geral vem do CSS do CardCanvas (inner div background).
+        Qualquer fill sólido do SVG na área da arte (x:154-829, y:166-852)
+        fica na frente da <img> e esconde a imagem — o SVG vem depois
+        no DOM então tem z-index implícito maior.
+      */}
 
       {/* coluna esquerda - fundo */}
       <rect x={28} y={34} width={122} height={819} fill={panelDark} />
       {/* cabeçalho - fundo */}
       <rect x={154} y={34} width={675} height={131} fill={panelDark} />
-      {/* área de arte (fundo neutro, a arte real cobre isso) */}
-      <rect x={154} y={166} width={675} height={686} fill="#e7e7e8" />
+      {/* área da arte: sem fill — a <img> abaixo mostra aqui */}
       {/* caixa de habilidade - fundo */}
       <rect x={36} y={853} width={793} height={199} fill={panelDark} />
       {/* rodapé - fundo */}
@@ -161,8 +168,6 @@ export function CardFrame({ accent, accentSoft }: CardFrameProps) {
         strokeWidth={2.5}
       />
       <line x1={567} y1={1052} x2={567} y2={1155} stroke={ink} strokeWidth={2} />
-      {/* círculo do emblema, colorido pelo tipo da carta */}
-      <circle cx={698} cy={1103} r={38} fill={accentSoft} stroke={accent} strokeWidth={3} />
 
       {/* ===== faixa inferior: aba colorida + rótulo de expansão + marcas ===== */}
       <path
@@ -172,7 +177,10 @@ export function CardFrame({ accent, accentSoft }: CardFrameProps) {
         strokeWidth={2}
         opacity={0.6}
       />
-      <rect x={36} y={1175} width={31} height={24} fill={accent} />
+      {/* swatch de cor do jogador — só aparece em cartas iniciais */}
+      {showSwatch && (
+        <rect x={36} y={1175} width={31} height={24} fill={swatchColor ?? accent} />
+      )}
       <line x1={36} y1={1155} x2={829} y2={1155} stroke={ink} strokeWidth={2} />
       {[0, 1, 2, 3, 4].map((i) => (
         <line

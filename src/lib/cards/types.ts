@@ -1,26 +1,16 @@
 /**
  * Schema de dados de uma carta de Solis.
- *
- * Este tipo é a "fonte da verdade" consumida pelo CardCanvas para renderizar
- * qualquer carta do jogo. Qualquer editor, importador/exportador de JSON ou
- * futura API deve produzir/consumir objetos neste formato.
+ * Fonte da verdade consumida pelo CardCanvas, editor, e futura persistência.
  */
 
 /**
- * NOTA DE GAP DE DESIGN (não é decisão minha, é um buraco real no GDD v0.3):
- * a seção 6.1.2 define função mecânica para os tipos "trabalhador" (otimizar
- * geração de trabalho), Ferramenta, Agilista, Diretor, Técnico e Analista —
- * mas o "Investidor" (gerador de Crédito, presente no deck inicial) não tem
- * tipo mecânico mapeado em lugar nenhum do documento. Para os dois exemplos
- * de carta funcionarem aqui, adicionei "investidor" como um 7º valor solto.
- * Vale revisar isso no GDD: ou o Investidor é uma variação do tipo
- * "trabalhador" (produção de Crédito em vez de Trabalho), ou é um tipo à
- * parte com função própria — hoje ele não se encaixa em nenhum dos 6 tipos
- * listados na tabela 6.1.2.
+ * GAP DE DESIGN (GDD v0.3 §6.1.2): "Investidor" não tem tipo mecânico
+ * definido na tabela dos 6 tipos. Adicionado como 7º tipo provisório —
+ * decidir se é sub-variante de trabalhador ou tipo próprio.
  */
 export type CardType =
-  | "trabalhador" // Operário / Supervisor / Engenheiro / Especialista
-  | "investidor" // gerador de Crédito — sem função mecânica definida no GDD
+  | "trabalhador"
+  | "investidor"
   | "ferramenta"
   | "agilista"
   | "diretor"
@@ -29,12 +19,11 @@ export type CardType =
 
 export type WorkerTier = "operario" | "supervisor" | "engenheiro" | "especialista";
 
-export type Rarity = "comum" | "incomum" | "rara" | "unica";
+export type Rarity = "comum" | "incomum" | "rara" | "unica" | "inicial";
 
 /**
- * Chaves do conjunto fixo de ícones do jogo (recursos, categorias, raridade...).
- * Diferente da arte central, esses ícones NÃO são upload livre — vêm de uma
- * biblioteca fechada renderizada em SVG (ver src/components/card/icons).
+ * Ícones fixos do jogo — NÃO são upload livre.
+ * Vêm de uma biblioteca SVG fechada (GameIcon).
  */
 export type IconKey =
   | "trabalho"
@@ -43,30 +32,46 @@ export type IconKey =
   | "combustivel"
   | "nanoestrutura"
   | "materia-exotica"
-  | "categoria-trabalho" // engrenagem
-  | "categoria-credito" // bolsa de moedas
-  | "emblema-asas" // selo do rodapé do exemplo "Operário"
-  | "emblema-urna"; // selo do rodapé do exemplo "Investidor"
+  // ícones de categoria (disponíveis para caixa 2, tags e ícone de habilidade)
+  | "cat-producao"
+  | "cat-economia"
+  | "cat-mercado"
+  | "cat-pesquisa"
+  | "cat-megaengenharia";
 
 /**
- * NOTA: o selo circular no rodapé (asas / urna nos dois exemplos) está
- * modelado aqui como "emblema" e não como ícone de raridade. Nos exemplos
- * enviados, os dois selos são símbolos diferentes entre si — isso parece
- * mais um emblema de corporação/facção por carta do que um indicador
- * incremental de raridade (comum→incomum→rara→única). Vale confirmar com
- * Davi o que esse selo representa de fato antes de expandir a biblioteca
- * de ícones — a resposta muda se for "1 emblema por carta" (dezenas de
- * ícones) ou "1 ícone por nível de raridade" (só 4 ícones).
+ * Categorias de habilidade disponíveis como select no editor.
  */
+export const ABILITY_CATEGORIES = [
+  "Produção",
+  "Economia",
+  "Mercado",
+  "Pesquisa",
+  "Megaengenharia",
+] as const;
+
+export type AbilityCategory = typeof ABILITY_CATEGORIES[number];
+
+/**
+ * Template automático de texto de habilidade com base no ícone + valor.
+ * Editável pelo usuário após auto-preenchimento.
+ */
+export const ABILITY_TEXT_TEMPLATE: Partial<Record<IconKey, (v: number) => string>> = {
+  trabalho:          (v) => `Gere ${v} ${v === 1 ? "Trabalho"              : "Trabalhos"}`,
+  credito:           (v) => `Receba ${v} ${v === 1 ? "Crédito"             : "Créditos"}`,
+  titanio:           (v) => `Produza ${v} ${v === 1 ? "Titânio"            : "Titânios"}`,
+  combustivel:       (v) => `Produza ${v} ${v === 1 ? "Combustível de Fusão" : "Combustíveis de Fusão"}`,
+  nanoestrutura:     (v) => `Produza ${v} ${v === 1 ? "Nanoestrutura"      : "Nanoestruturas"}`,
+  "materia-exotica": (v) => `Produza ${v} ${v === 1 ? "Matéria Exótica"   : "Matérias Exóticas"}`,
+};
 
 export interface CardArt {
-  /** data URL ou caminho da imagem enviada pelo usuário */
   src: string;
-  /** deslocamento horizontal em % do quadro de arte, para reenquadrar */
+  /** deslocamento horizontal em % — alimenta transform:translate */
   offsetX?: number;
-  /** deslocamento vertical em % do quadro de arte */
+  /** deslocamento vertical em % */
   offsetY?: number;
-  /** escala (1 = encaixa no quadro) */
+  /** escala (1 = preenche o quadro) */
   scale?: number;
 }
 
@@ -74,40 +79,55 @@ export interface SolisCard {
   id: string;
 
   cardType: CardType;
-  /** Só relevante quando cardType === 'trabalhador' */
   workerTier?: WorkerTier;
 
   name: string;
   subtitle: string;
 
-  /** Custo em Trabalho para jogar a carta. Pode ser número fixo ou "X". */
   cost: number | "X";
 
-  /** Ícone exibido na 2ª caixa da coluna esquerda (categoria da carta). */
+  /** Ícone na 2ª caixa da coluna esquerda */
   categoryIcon: IconKey;
-
-  /**
-   * Ícones de palavra-chave/tag exibidos nas 3 caixas vazias da coluna
-   * esquerda (caixas 3, 4 e 5). Array de até 3 posições; null = caixa vazia.
-   */
+  /** Até 3 ícones de tag (caixas 3-5). null = caixa vazia */
   tagIcons?: (IconKey | null)[];
 
   art?: CardArt;
 
-  /** Rótulo da categoria de habilidade, ex: "Produção", "Economia". */
-  abilityCategory: string;
+  abilityCategory: AbilityCategory;
   abilityIcon: IconKey;
-  /** Valor numérico mostrado dentro do ícone de habilidade (ex.: o "1" de "+1"). */
   abilityValue?: number;
+  /** Auto-preenchido a partir de abilityIcon + abilityValue, editável */
   abilityText: string;
 
   flavorText?: string;
 
   rarity: Rarity;
 
-  /** Selo circular do rodapé (ver nota em IconKey sobre emblema vs raridade). */
-  emblemIcon: IconKey;
+  /**
+   * Cor do jogador dono desta carta — só relevante quando rarity === "inicial".
+   * As 5 cores são as mesmas das corporações (um jogador por corporação).
+   * Quando definida, o swatch colorido no canto inferior esquerdo da carta
+   * exibe esta cor como indicador visual de pertencimento.
+   */
+  playerColor?: string;
 
-  /** Rótulo da expansão/set mostrado na faixa inferior, ex.: "Inicial". */
-  expansionLabel: string;
+  /**
+   * Slug do grupo de variantes ao qual esta carta pertence.
+   * Ex: "operario" agrupa as 5 variantes coloridas do Operário.
+   * Indefinido = carta sem variantes.
+   */
+  variantGroup?: string;
+
+  /**
+   * ID da empresa dona da carta — define o logo no círculo do rodapé.
+   * Ver src/lib/cards/companies.ts.
+   */
+  companyId: string;
+
+  /**
+   * Número de cópias desta carta no deck.
+   * O TTS lê este valor do manifest e instancia a quantidade correta.
+   * Padrão: 1 se ausente.
+   */
+  quantity?: number;
 }
