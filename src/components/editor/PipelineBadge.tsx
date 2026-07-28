@@ -172,8 +172,8 @@ export function PipelineBadge() {
     return () => document.removeEventListener("mousedown", h);
   }, [open]);
 
-  /* não renderiza se nunca houve jobs */
-  if (!hasJobs) return null;
+  /* não renderiza enquanto não há jobs na sessão E está idle */
+  // Badge sempre visível — mostra estado idle quando não há jobs ativos
 
   return (
     <div ref={ref} className="relative">
@@ -196,18 +196,24 @@ export function PipelineBadge() {
         </svg>
 
         {/* badge de status — sobrepõe o canto superior direito */}
-        {globalStatus !== "idle" && (
+        {globalStatus !== "idle" ? (
           <span
             className={`absolute -right-1 -top-1 flex h-3.5 w-3.5 items-center justify-center rounded-full border-2 text-[7px] font-black text-white ${
               globalStatus === "translating" ? "animate-pulse" : ""
             }`}
             style={{
-              background:   badgeColor,
-              borderColor:  "var(--bg-base)",
+              background:  badgeColor,
+              borderColor: "var(--bg-base)",
             }}
           >
             {globalStatus === "translating" ? "⟳" : globalStatus === "done" ? "✓" : "✗"}
           </span>
+        ) : (
+          /* idle: dot cinza discreto */
+          <span
+            className="absolute -right-1 -top-1 h-2.5 w-2.5 rounded-full border-2"
+            style={{ background: "#4a5168", borderColor: "var(--bg-base)" }}
+          />
         )}
       </button>
 
@@ -243,9 +249,20 @@ export function PipelineBadge() {
           {/* lista de jobs */}
           <div className="max-h-[70vh] overflow-y-auto">
             {jobList.length === 0 ? (
-              <p className="px-4 py-6 text-center text-xs" style={{ color: "var(--text-3)" }}>
-                Nenhuma tradução em andamento.
-              </p>
+              <div className="flex flex-col items-center gap-2 px-4 py-8 text-center">
+                <svg className="h-8 w-8" style={{ color: "var(--text-3)" }} fill="none"
+                  viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                  <circle cx="12" cy="12" r="10"/>
+                  <path strokeLinecap="round" d="M2 12h20M12 2a15.3 15.3 0 010 20M12 2a15.3 15.3 0 000 20"/>
+                </svg>
+                <p className="text-xs font-medium" style={{ color: "var(--text-2)" }}>
+                  Nenhuma tradução em andamento
+                </p>
+                <p className="text-[11px]" style={{ color: "var(--text-3)" }}>
+                  As traduções serão iniciadas automaticamente<br/>
+                  ao salvar uma carta
+                </p>
+              </div>
             ) : (
               jobList.map((job) => (
                 <JobRow
