@@ -51,6 +51,7 @@ interface EditorState {
   saveCard:      (label?: string) => Promise<void>;
   duplicateCard: (id: string) => Promise<void>;
   deleteCard:    (id: string) => Promise<void>;
+  importCards:   (cards: SolisCard[]) => Promise<void>;
 
   /**
    * Cria 5 variantes da carta ativa — uma por corporação/jogador.
@@ -228,6 +229,20 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       set({ library, isLoading: false });
     } catch (e) {
       set({ isLoading: false, dbError: (e as Error).message });
+    }
+  },
+
+  importCards: async (cards) => {
+    set({ isLoading: true, dbError: null });
+    try {
+      for (const card of cards) {
+        await saveCardToDb(card);
+      }
+      const library = await fetchAllCards();
+      set({ library, isLoading: false });
+    } catch (e) {
+      set({ isLoading: false, dbError: (e as Error).message });
+      throw e;
     }
   },
 

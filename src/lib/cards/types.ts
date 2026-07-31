@@ -132,4 +132,10 @@ export interface SolisCard {
    * Preenchido ao carregar do banco. Necessário para criar/atualizar card_translations.
    */
   _cardId?: string;
+
+  /**
+   * Carta importada com campos incompletos — marcada visualmente na biblioteca.
+   * Recalculado automaticamente ao salvar.
+   */
+  isDraft?: boolean;
 }
