@@ -8,7 +8,6 @@ import { FilterBar } from "@/components/filter/FilterBar";
 import { FilterCriteria, EMPTY_FILTER, filterCards } from "@/lib/filter";
 import { useConfirm } from "@/components/ui/ConfirmModal";
 import { usePipelineStore, isCardTranslating } from "@/store/pipelineStore";
-import { ImportModal } from "./ImportModal";
 
 /* ── agrupamento ── */
 type LibraryItem =
@@ -268,16 +267,6 @@ function CardItem({ card, isActive, onLoad, onDuplicate, onDelete }: {
           style={{ borderRadius: CARD_RADIUS_168 }} />
       )}
 
-      {/* badge de rascunho */}
-      {card.isDraft && (
-        <span
-          className="absolute right-1 top-1 rounded px-1.5 py-0.5 text-[8px] font-bold uppercase tracking-wide"
-          style={{ background: "#ea580c", color: "#fff" }}
-        >
-          Draft
-        </span>
-      )}
-
       <span className="absolute left-1 top-1 rounded-sm px-1 py-0.5 text-[8px] font-bold uppercase tracking-wider text-white"
         style={{ background: theme.accent }}>
         {theme.label}
@@ -310,9 +299,8 @@ function CardItem({ card, isActive, onLoad, onDuplicate, onDelete }: {
 /* ── painel principal ── */
 export function CardLibrary() {
   const { library, activeCard, loadCard, duplicateCard, deleteCard } = useEditorStore();
-  const [filter, setFilter]       = useState<FilterCriteria>(EMPTY_FILTER);
-  const [importOpen, setImportOpen] = useState(false);
-  const { ask, modal }            = useConfirm();
+  const [filter, setFilter] = useState<FilterCriteria>(EMPTY_FILTER);
+  const { ask, modal }      = useConfirm();
 
   /* ── handlers com confirmação ── */
   const handleLoad = async (card: SolisCard) => {
@@ -355,32 +343,16 @@ export function CardLibrary() {
   return (
     <>
       {modal}
-      <ImportModal open={importOpen} onClose={() => setImportOpen(false)} />
       <aside className="flex h-full w-64 shrink-0 flex-col border-l border-neutral-800 bg-neutral-900">
         <div className="flex flex-col gap-3 border-b border-neutral-800 px-3 py-3">
-          <div className="flex items-center justify-between">
-            <p className="text-[10px] font-bold uppercase tracking-widest text-neutral-500">
-              Biblioteca · {library.length}
-              {groups > 0 && (
-                <span className="ml-1 text-neutral-600">
-                  ({groups} grupo{groups !== 1 ? "s" : ""})
-                </span>
-              )}
-            </p>
-            {/* botão de import */}
-            <button
-              type="button"
-              onClick={() => setImportOpen(true)}
-              className="flex items-center gap-1 rounded-md border px-2 py-1 text-[10px] font-medium transition-colors hover:border-neutral-500 hover:text-white"
-              style={{ borderColor: "var(--border)", color: "var(--text-3)", cursor: "pointer" }}
-              title="Importar cartas via JSON"
-            >
-              <svg className="h-3 w-3" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M8 2v8m0 0L5 7m3 3 3-3M2 12h12"/>
-              </svg>
-              Import
-            </button>
-          </div>
+          <p className="text-[10px] font-bold uppercase tracking-widest text-neutral-500">
+            Biblioteca · {library.length}
+            {groups > 0 && (
+              <span className="ml-1 text-neutral-600">
+                ({groups} grupo{groups !== 1 ? "s" : ""})
+              </span>
+            )}
+          </p>
           <FilterBar
             filter={filter}
             onChange={setFilter}

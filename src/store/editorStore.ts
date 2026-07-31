@@ -9,7 +9,6 @@ import {
   deleteCard as deleteCardFromDb,
 } from "@/lib/supabase/cards.service";
 import { translateCard } from "@/lib/localization/pipeline";
-import { getMissingFields } from "@/lib/cards/import";
 
 function makeId() {
   return `card-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
@@ -138,15 +137,11 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   saveCard: async (label) => {
     set({ isLoading: true, dbError: null });
     try {
-      // Recalcula isDraft — remove o badge quando todos os campos estão preenchidos
-      const current = get().activeCard;
-      const missing = getMissingFields(current);
-      const cardToSave = { ...current, isDraft: missing.length > 0 };
-
-      const saved = await saveCardToDb(cardToSave, label);
+      const saved = await saveCardToDb(get().activeCard, label);
       const library = await fetchAllCards();
       set({ activeCard: saved, library, isLoading: false });
 
+      // Dispara a pipeline de tradução em background — não bloqueia o editor
       translateCard(saved, saved.id).catch((e) =>
         console.warn("Pipeline de tradução falhou:", e)
       );
@@ -187,21 +182,6 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       set({ library, activeCard: active, isLoading: false });
     } catch (e) {
       set({ isLoading: false, dbError: (e as Error).message });
-    }
-  },
-
-  importCards: async (cards) => {
-    set({ isLoading: true, dbError: null });
-    try {
-      // Salva cada carta sequencialmente para evitar conflito de slugs
-      for (const card of cards) {
-        await saveCardToDb(card);
-      }
-      const library = await fetchAllCards();
-      set({ library, isLoading: false });
-    } catch (e) {
-      set({ isLoading: false, dbError: (e as Error).message });
-      throw e;
     }
   },
 
@@ -249,6 +229,20 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       set({ library, isLoading: false });
     } catch (e) {
       set({ isLoading: false, dbError: (e as Error).message });
+    }
+  },
+
+  importCards: async (cards) => {
+    set({ isLoading: true, dbError: null });
+    try {
+      for (const card of cards) {
+        await saveCardToDb(card);
+      }
+      const library = await fetchAllCards();
+      set({ library, isLoading: false });
+    } catch (e) {
+      set({ isLoading: false, dbError: (e as Error).message });
+      throw e;
     }
   },
 
