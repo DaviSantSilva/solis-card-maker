@@ -272,7 +272,7 @@ function CardItem({ card, isActive, onLoad, onDuplicate, onDelete }: {
       {card.isDraft && (
         <span
           className="absolute right-1 top-1 rounded px-1.5 py-0.5 text-[8px] font-bold uppercase tracking-wide"
-          style={{ background: "#f59e0b22", color: "#f59e0b", border: "1px solid #f59e0b55" }}
+          style={{ background: "#ea580c", color: "#fff" }}
         >
           Draft
         </span>

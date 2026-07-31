@@ -52,7 +52,7 @@ export function FilterBar({ filter, onChange, resultCount, totalCount }: {
           </button>
 
           {open && (
-            <div className="absolute left-0 top-full z-50 mt-2 w-80 overflow-hidden rounded-xl border shadow-2xl"
+            <div className="absolute right-0 top-full z-50 mt-2 w-80 overflow-hidden rounded-xl border shadow-2xl"
               style={{ borderColor: "var(--border)", background: "var(--bg-overlay)", boxShadow: "0 24px 48px rgba(0,0,0,.6)" }}>
               <div className="flex items-center justify-between border-b px-4 py-3"
                 style={{ borderColor: "var(--border)" }}>
