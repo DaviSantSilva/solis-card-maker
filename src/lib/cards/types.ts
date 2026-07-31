@@ -127,9 +127,12 @@ export interface SolisCard {
   /** Número de cópias desta carta no deck. */
   quantity?: number;
 
-  /**
-   * ID da entidade `cards` no Supabase (não armazenado em card_versions.data).
-   * Preenchido ao carregar do banco. Necessário para criar/atualizar card_translations.
-   */
+  /** ID da entidade `cards` no Supabase (não armazenado em card_versions.data). */
   _cardId?: string;
+
+  /**
+   * Carta importada com campos incompletos — marcada visualmente na biblioteca.
+   * Uma carta é rascunho se qualquer campo obrigatório estiver ausente/vazio.
+   */
+  isDraft?: boolean;
 }
