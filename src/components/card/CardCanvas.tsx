@@ -80,19 +80,19 @@ export const CardCanvas = forwardRef<
           overflow: "hidden",
           background: "#e0e1e3", // cinza fallback quando não há arte
         }}>
-          {card.art?.src && (
+          {/* Arte da carta — usa TBD como fallback para drafts sem imagem */}
+          {(card.art?.src || card.isDraft) && (
             // eslint-disable-next-line @next/next/no-img-element
             <img
-              src={card.art.src}
+              src={card.art?.src || "/tbd.png"}
               alt=""
               style={{
                 width: "100%", height: "100%",
-                /* contain: exibe a imagem inteira sem corte automático.
-                   O usuário usa os sliders de zoom/posição para ajustar.
-                   scale > 1 no slider zooma e começa a cortar, igual ao cover anterior. */
                 objectFit: "contain",
                 transformOrigin: "50% 50%",
-                transform: `translate(${card.art.offsetX ?? 0}%, ${card.art.offsetY ?? 0}%) scale(${card.art.scale ?? 1})`,
+                transform: card.art?.src
+                  ? `translate(${card.art.offsetX ?? 0}%, ${card.art.offsetY ?? 0}%) scale(${card.art.scale ?? 1})`
+                  : "none",
               }}
             />
           )}
