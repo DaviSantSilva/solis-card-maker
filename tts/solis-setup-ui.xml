@@ -14,10 +14,10 @@
   <Panel class="section" color="#1a1d22" outline="#252930" outlineSize="1 1"/>
   <Text class="heading" color="#eceef3" fontSize="17" fontStyle="bold" alignment="MiddleLeft"/>
   <Text class="label" color="#8892a4" fontSize="13" alignment="MiddleLeft"/>
-  <Toggle class="pill" colors="#1a1d22|#252930|#3b82f6|#131518" textColor="#8892a4" fontSize="16"/>
+  <Toggle textColor="#eceef3" fontSize="16"/>
 </Defaults>
 
-<Panel id="solisSetupPanel" position="0 260 0" width="760" height="700"
+<Panel id="solisSetupPanel" position="0 260 0" width="620" height="560"
        color="#0c0d0fee" outline="#252930" outlineSize="2 2"
        allowDragging="true" returnToOriginalPositionWhenReleased="false">
 
@@ -30,7 +30,7 @@
         <Text text="Configuração de mesa" fontSize="14" color="#4a5168" alignment="MiddleLeft" height="20"/>
       </VerticalLayout>
       <Button id="closePanelButton" text="✕" onClick="onCloseClick"
-              position="350 0 0" width="40" height="40"
+              position="280 0 0" width="40" height="40"
               color="#00000000" textColor="#4a5168" fontSize="20"/>
     </Panel>
 
@@ -39,13 +39,13 @@
       <!-- jogadores -->
       <VerticalLayout spacing="10">
         <Text class="heading" text="Jogadores" height="22"/>
-        <HorizontalLayout spacing="8" height="56">
+        <HorizontalLayout spacing="20" height="34">
           <ToggleGroup id="playersGroup">
-            <Toggle class="pill" id="players_1" text="1" onValueChanged="onPlayersToggle"/>
-            <Toggle class="pill" id="players_2" text="2" onValueChanged="onPlayersToggle"/>
-            <Toggle class="pill" id="players_3" text="3" onValueChanged="onPlayersToggle"/>
-            <Toggle class="pill" id="players_4" text="4" onValueChanged="onPlayersToggle"/>
-            <Toggle class="pill" id="players_5" text="5" onValueChanged="onPlayersToggle" isOn="true"/>
+            <Toggle id="players_1" text="1" onValueChanged="onPlayersToggle"/>
+            <Toggle id="players_2" text="2" onValueChanged="onPlayersToggle"/>
+            <Toggle id="players_3" text="3" onValueChanged="onPlayersToggle"/>
+            <Toggle id="players_4" text="4" onValueChanged="onPlayersToggle"/>
+            <Toggle id="players_5" text="5" onValueChanged="onPlayersToggle" isOn="true"/>
           </ToggleGroup>
         </HorizontalLayout>
       </VerticalLayout>
@@ -56,14 +56,14 @@
       <!-- idioma -->
       <VerticalLayout spacing="10">
         <Text class="heading" text="Idioma" height="22"/>
-        <GridLayout cellSize="106 52" spacing="8 8" constraintCount="6" height="52">
+        <GridLayout cellSize="90 34" spacing="12 10" constraintCount="3" height="80">
           <ToggleGroup id="localeGroup">
-            <Toggle class="pill" id="locale_pt" text="PT" onValueChanged="onLocaleToggle" isOn="true"/>
-            <Toggle class="pill" id="locale_en" text="EN" onValueChanged="onLocaleToggle"/>
-            <Toggle class="pill" id="locale_es" text="ES" onValueChanged="onLocaleToggle"/>
-            <Toggle class="pill" id="locale_fr" text="FR" onValueChanged="onLocaleToggle"/>
-            <Toggle class="pill" id="locale_de" text="DE" onValueChanged="onLocaleToggle"/>
-            <Toggle class="pill" id="locale_zh" text="ZH" onValueChanged="onLocaleToggle"/>
+            <Toggle id="locale_pt" text="PT" onValueChanged="onLocaleToggle" isOn="true"/>
+            <Toggle id="locale_en" text="EN" onValueChanged="onLocaleToggle"/>
+            <Toggle id="locale_es" text="ES" onValueChanged="onLocaleToggle"/>
+            <Toggle id="locale_fr" text="FR" onValueChanged="onLocaleToggle"/>
+            <Toggle id="locale_de" text="DE" onValueChanged="onLocaleToggle"/>
+            <Toggle id="locale_zh" text="ZH" onValueChanged="onLocaleToggle"/>
           </ToggleGroup>
         </GridLayout>
       </VerticalLayout>
@@ -73,10 +73,10 @@
       <!-- modo -->
       <VerticalLayout spacing="10">
         <Text class="heading" text="Modo de setup" height="22"/>
-        <HorizontalLayout spacing="8" height="56">
+        <HorizontalLayout spacing="24" height="34">
           <ToggleGroup id="modeGroup">
-            <Toggle class="pill" id="mode_auto"   text="Automático" onValueChanged="onModeToggle" isOn="true"/>
-            <Toggle class="pill" id="mode_manual" text="Manual"     onValueChanged="onModeToggle"/>
+            <Toggle id="mode_auto"   text="Automático" onValueChanged="onModeToggle" isOn="true"/>
+            <Toggle id="mode_manual" text="Manual"     onValueChanged="onModeToggle"/>
           </ToggleGroup>
         </HorizontalLayout>
         <Text class="label" text="Automático: entrega os decks direto aos jogadores sentados. Manual: empilha tudo fora da mesa." height="34"/>
@@ -96,5 +96,5 @@
 
 <!-- botão discreto para reabrir o painel depois de fechado -->
 <Button id="reopenPanelButton" text="⚙ Configurar Mesa" onClick="onReopenClick"
-        position="0 -430 0" width="220" height="46"
+        position="0 -300 0" width="220" height="46"
         color="#131518" textColor="#8892a4" fontSize="15" active="false"/>
