@@ -190,11 +190,19 @@ function onReopenClick()
     Global.UI.setAttribute("reopenPanelButton", "active", "false")
 end
 
+local isSpawning = false
+
 function onStartSetupClick(player)
     if not isHost(player) then
         Global.UI.setValue("setupStatusText", "Apenas o host pode iniciar o setup.")
         return
     end
+    if isSpawning then
+        Global.UI.setValue("setupStatusText", "Setup já em andamento, aguarde…")
+        return
+    end
+    isSpawning = true
+    Global.UI.setAttribute("startSetupButton", "interactable", "false")
     Global.UI.setValue("setupStatusText", "Buscando cartas…")
     fetchManifestAndSpawn()
 end
@@ -209,12 +217,16 @@ function fetchManifestAndSpawn()
     WebRequest.get(url, function(request)
         if request.is_error or request.response_code ~= 200 then
             Global.UI.setValue("setupStatusText", "Erro ao buscar manifest: " .. tostring(request.error))
+            isSpawning = false
+            Global.UI.setAttribute("startSetupButton", "interactable", "true")
             return
         end
 
         local ok, manifest = pcall(JSON.decode, request.text)
         if not ok or manifest == nil then
             Global.UI.setValue("setupStatusText", "Manifest inválido.")
+            isSpawning = false
+            Global.UI.setAttribute("startSetupButton", "interactable", "true")
             return
         end
 
@@ -268,9 +280,37 @@ local function enqueueDeck(cardList, targetPos)
     end
 end
 
+-- Remove qualquer Deck/Carta já existente nas posições de destino
+-- antes de gerar as novas. Torna 'Começar' idempotente — clicar
+-- de novo nunca acumula cartas duplicadas por cima das anteriores.
+local function clearPileAt(worldPos)
+    local hits = Physics.cast({
+        origin       = worldPos,
+        direction    = { 0, -1, 0 },
+        type         = 2,
+        size         = { 1, 1, 1 },
+        max_distance = 1,
+    })
+    for _, hit in ipairs(hits) do
+        local obj = hit.hit_object
+        if obj.type == "Deck" or obj.type == "Card" then
+            obj.destruct()
+        end
+    end
+end
+
+local function clearAllTargetPositions()
+    clearPileAt(POSITIONS.market.deck)
+    for _, pos in pairs(POSITIONS.corp) do
+        clearPileAt(pos.deck)
+    end
+end
+
 function spawnAllDecks(mainDeckCards, corpDeckCards)
     spawnQueue = {}
     decksByPositionKey = {}
+
+    clearAllTargetPositions()
 
     enqueueDeck(mainDeckCards, POSITIONS.market.deck)
     for corp, cards in pairs(corpDeckCards) do
@@ -283,7 +323,11 @@ end
 
 function processSpawnQueue(index)
     if index > #spawnQueue then
-        Wait.time(function() mergeAllPendingDecks() end, 0.6)
+        Wait.time(function()
+            mergeAllPendingDecks()
+            isSpawning = false
+            Global.UI.setAttribute("startSetupButton", "interactable", "true")
+        end, 0.6)
         Global.UI.setValue("setupStatusText", "Setup pronto!")
         return
     end
@@ -304,6 +348,7 @@ function processSpawnQueue(index)
         },
         Nickname   = item.name,
         CardID     = cardId,
+        Locked     = false, -- sem isso o TTS trava o objeto: sem gravidade, sem colisão
         CustomDeck = {
             [tostring(deckKey)] = {
                 FaceURL      = item.faceUrl,
