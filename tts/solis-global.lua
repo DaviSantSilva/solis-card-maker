@@ -283,17 +283,22 @@ end
 -- Remove qualquer Deck/Carta já existente nas posições de destino
 -- antes de gerar as novas. Torna 'Começar' idempotente — clicar
 -- de novo nunca acumula cartas duplicadas por cima das anteriores.
+-- Busca numa área mais ampla (não só o ponto exato) para pegar
+-- cartas que tenham ficado espalhadas de tentativas anteriores.
 local function clearPileAt(worldPos)
     local hits = Physics.cast({
-        origin       = worldPos,
+        origin       = { worldPos.x, worldPos.y + 3, worldPos.z },
         direction    = { 0, -1, 0 },
         type         = 2,
-        size         = { 1, 1, 1 },
-        max_distance = 1,
+        size         = { 3, 6, 3 }, -- área ampla o suficiente para pegar cartas dispersas
+        max_distance = 6,
     })
+
+    local destroyed = {}
     for _, hit in ipairs(hits) do
         local obj = hit.hit_object
-        if obj.type == "Deck" or obj.type == "Card" then
+        if (obj.type == "Deck" or obj.type == "Card") and not destroyed[obj.getGUID()] then
+            destroyed[obj.getGUID()] = true
             obj.destruct()
         end
     end
