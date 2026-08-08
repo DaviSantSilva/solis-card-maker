@@ -98,6 +98,8 @@ local setupState = {
     mode    = "auto", -- "auto" | "manual"
 }
 
+local panelOpen = true
+
 -- ── ciclo de vida ──────────────────────────────────────────
 
 function onLoad()
@@ -109,52 +111,101 @@ local function isHost(playerColor)
     return p ~= nil and p.host == true
 end
 
--- ── XML do painel ────────────────────────────────────────────
+-- ── XML do painel — paleta idêntica ao Card Maker web ────────
+-- bg-base #0c0d0f · bg-surface #131518 · bg-raised #1a1d22
+-- bg-overlay #20242b · border #252930 · text-1 #eceef3
+-- text-2 #8892a4 · text-3 #4a5168 · accent #3b82f6
 
 function buildSetupPanelXml()
     return [[
-<Panel id="solisSetupPanel" position="0 250 0" width="820" height="640"
-       color="#12141aee" outline="#2a2f3a" outlineSize="2 2" padding="24 24 24 24">
+<Defaults>
+  <Panel class="section" color="#1a1d22" outline="#252930" outlineSize="1 1"/>
+  <Text class="heading" color="#eceef3" fontSize="17" fontStyle="bold" alignment="MiddleLeft"/>
+  <Text class="label" color="#8892a4" fontSize="13" alignment="MiddleLeft"/>
+  <Toggle class="pill" colors="#1a1d22|#252930|#3b82f6|#131518" textColor="#8892a4" fontSize="16"/>
+</Defaults>
 
-  <Text text="SOLIS — Configuração de Mesa" fontSize="30" color="#eceef3"
-        alignment="MiddleCenter" height="44"/>
+<Panel id="solisSetupPanel" position="0 260 0" width="760" height="700"
+       color="#0c0d0fee" outline="#252930" outlineSize="2 2"
+       allowDragging="true" returnToOriginalPositionWhenReleased="false">
 
-  <Text text="Jogadores" fontSize="18" color="#8892a4" height="26"/>
-  <HorizontalLayout spacing="8" height="70">
-    <ToggleGroup id="playersGroup">
-      <Toggle id="players_1" text="1" onValueChanged="onPlayersToggle" fontSize="22"/>
-      <Toggle id="players_2" text="2" onValueChanged="onPlayersToggle" fontSize="22"/>
-      <Toggle id="players_3" text="3" onValueChanged="onPlayersToggle" fontSize="22"/>
-      <Toggle id="players_4" text="4" onValueChanged="onPlayersToggle" fontSize="22"/>
-      <Toggle id="players_5" text="5" onValueChanged="onPlayersToggle" fontSize="22" isOn="true"/>
-    </ToggleGroup>
-  </HorizontalLayout>
+  <VerticalLayout padding="0 0 0 0" spacing="0">
 
-  <Text text="Idioma" fontSize="18" color="#8892a4" height="26"/>
-  <GridLayout cellSize="120 60" spacing="8 8" constraintCount="3" height="140">
-    <ToggleGroup id="localeGroup">
-      <Toggle id="locale_pt" text="PT" onValueChanged="onLocaleToggle" fontSize="20" isOn="true"/>
-      <Toggle id="locale_en" text="EN" onValueChanged="onLocaleToggle" fontSize="20"/>
-      <Toggle id="locale_es" text="ES" onValueChanged="onLocaleToggle" fontSize="20"/>
-      <Toggle id="locale_fr" text="FR" onValueChanged="onLocaleToggle" fontSize="20"/>
-      <Toggle id="locale_de" text="DE" onValueChanged="onLocaleToggle" fontSize="20"/>
-      <Toggle id="locale_zh" text="ZH" onValueChanged="onLocaleToggle" fontSize="20"/>
-    </ToggleGroup>
-  </GridLayout>
+    <!-- cabeçalho -->
+    <Panel color="#131518" height="86" outline="#252930" outlineSize="0 1">
+      <VerticalLayout padding="24 24 14 14" spacing="2">
+        <Text text="SOLIS" fontSize="30" fontStyle="bold" color="#eceef3" alignment="MiddleLeft" height="36"/>
+        <Text text="Configuração de mesa" fontSize="14" color="#4a5168" alignment="MiddleLeft" height="20"/>
+      </VerticalLayout>
+      <Button id="closePanelButton" text="✕" onClick="onCloseClick"
+              position="350 0 0" width="40" height="40"
+              color="#00000000" textColor="#4a5168" fontSize="20"/>
+    </Panel>
 
-  <Text text="Modo de Setup" fontSize="18" color="#8892a4" height="26"/>
-  <HorizontalLayout spacing="8" height="70">
-    <ToggleGroup id="modeGroup">
-      <Toggle id="mode_auto"   text="Automático" onValueChanged="onModeToggle" fontSize="20" isOn="true"/>
-      <Toggle id="mode_manual" text="Manual"     onValueChanged="onModeToggle" fontSize="20"/>
-    </ToggleGroup>
-  </HorizontalLayout>
+    <VerticalLayout padding="28 28 20 20" spacing="22">
 
-  <Text id="setupStatusText" text="" fontSize="16" color="#f59e0b" height="30" alignment="MiddleCenter"/>
+      <!-- jogadores -->
+      <VerticalLayout spacing="10">
+        <Text class="heading" text="Jogadores" height="22"/>
+        <HorizontalLayout spacing="8" height="56">
+          <ToggleGroup id="playersGroup">
+            <Toggle class="pill" id="players_1" text="1" onValueChanged="onPlayersToggle"/>
+            <Toggle class="pill" id="players_2" text="2" onValueChanged="onPlayersToggle"/>
+            <Toggle class="pill" id="players_3" text="3" onValueChanged="onPlayersToggle"/>
+            <Toggle class="pill" id="players_4" text="4" onValueChanged="onPlayersToggle"/>
+            <Toggle class="pill" id="players_5" text="5" onValueChanged="onPlayersToggle" isOn="true"/>
+          </ToggleGroup>
+        </HorizontalLayout>
+      </VerticalLayout>
 
-  <Button id="startSetupButton" text="INICIAR SETUP" onClick="onStartSetupClick"
-          height="64" fontSize="24" color="#3b82f6" textColor="#ffffff"/>
+      <!-- separador -->
+      <Panel color="#1c1f26" height="1"/>
+
+      <!-- idioma -->
+      <VerticalLayout spacing="10">
+        <Text class="heading" text="Idioma" height="22"/>
+        <GridLayout cellSize="106 52" spacing="8 8" constraintCount="6" height="52">
+          <ToggleGroup id="localeGroup">
+            <Toggle class="pill" id="locale_pt" text="PT" onValueChanged="onLocaleToggle" isOn="true"/>
+            <Toggle class="pill" id="locale_en" text="EN" onValueChanged="onLocaleToggle"/>
+            <Toggle class="pill" id="locale_es" text="ES" onValueChanged="onLocaleToggle"/>
+            <Toggle class="pill" id="locale_fr" text="FR" onValueChanged="onLocaleToggle"/>
+            <Toggle class="pill" id="locale_de" text="DE" onValueChanged="onLocaleToggle"/>
+            <Toggle class="pill" id="locale_zh" text="ZH" onValueChanged="onLocaleToggle"/>
+          </ToggleGroup>
+        </GridLayout>
+      </VerticalLayout>
+
+      <Panel color="#1c1f26" height="1"/>
+
+      <!-- modo -->
+      <VerticalLayout spacing="10">
+        <Text class="heading" text="Modo de setup" height="22"/>
+        <HorizontalLayout spacing="8" height="56">
+          <ToggleGroup id="modeGroup">
+            <Toggle class="pill" id="mode_auto"   text="Automático" onValueChanged="onModeToggle" isOn="true"/>
+            <Toggle class="pill" id="mode_manual" text="Manual"     onValueChanged="onModeToggle"/>
+          </ToggleGroup>
+        </HorizontalLayout>
+        <Text class="label" text="Automático: entrega os decks direto aos jogadores sentados. Manual: empilha tudo fora da mesa." height="34"/>
+      </VerticalLayout>
+
+      <!-- status -->
+      <Text id="setupStatusText" text="" fontSize="14" color="#f59e0b" height="24" alignment="MiddleCenter"/>
+
+      <!-- ação -->
+      <Button id="startSetupButton" text="INICIAR SETUP" onClick="onStartSetupClick"
+              height="58" fontSize="20" fontStyle="bold"
+              colors="#3b82f6|#2563eb|#1d4ed8|#1a1d22" textColor="#ffffff"/>
+
+    </VerticalLayout>
+  </VerticalLayout>
 </Panel>
+
+<!-- botão discreto para reabrir o painel depois de fechado -->
+<Button id="reopenPanelButton" text="⚙ Configurar Mesa" onClick="onReopenClick"
+        position="0 -430 0" width="220" height="46"
+        color="#131518" textColor="#8892a4" fontSize="15" active="false"/>
 ]]
 end
 
@@ -166,7 +217,7 @@ end
 
 function onPlayersToggle(playerColor, value, id)
     if not isHost(playerColor) then
-        Global.UI.setAttribute(id, "isOn", value ~= "True")
+        Global.UI.setAttribute(id, "isOn", tostring(value ~= "True"))
         return
     end
     if value ~= "True" then return end
@@ -175,7 +226,7 @@ end
 
 function onLocaleToggle(playerColor, value, id)
     if not isHost(playerColor) then
-        Global.UI.setAttribute(id, "isOn", value ~= "True")
+        Global.UI.setAttribute(id, "isOn", tostring(value ~= "True"))
         return
     end
     if value ~= "True" then return end
@@ -184,11 +235,25 @@ end
 
 function onModeToggle(playerColor, value, id)
     if not isHost(playerColor) then
-        Global.UI.setAttribute(id, "isOn", value ~= "True")
+        Global.UI.setAttribute(id, "isOn", tostring(value ~= "True"))
         return
     end
     if value ~= "True" then return end
     setupState.mode = id:match("mode_(%a+)")
+end
+
+-- ── abrir/fechar painel ──────────────────────────────────────
+
+function onCloseClick()
+    panelOpen = false
+    Global.UI.setAttribute("solisSetupPanel", "active", "false")
+    Global.UI.setAttribute("reopenPanelButton", "active", "true")
+end
+
+function onReopenClick()
+    panelOpen = true
+    Global.UI.setAttribute("solisSetupPanel", "active", "true")
+    Global.UI.setAttribute("reopenPanelButton", "active", "false")
 end
 
 function onStartSetupClick(playerColor)
