@@ -90,6 +90,6 @@
 </Panel>
 
 <!-- botão discreto para reabrir o painel depois de fechado -->
-<Button id="reopenPanelButton" text="⚙ Configurar Mesa" onClick="onReopenClick"
-        rectAlignment="LowerCenter" position="0 30 0" width="220" height="46"
-        color="#131518" textColor="#8892a4" fontSize="15" active="false"/>
+<Button id="reopenPanelButton" text="⚙" onClick="onReopenClick"
+        rectAlignment="LowerRight" position="-20 20 0" width="44" height="44"
+        color="#131518cc" textColor="#8892a4" fontSize="20" active="false"/>

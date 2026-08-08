@@ -373,7 +373,7 @@ function processSpawnQueue(index)
         Name      = "CardCustom",
         Transform = {
             posX = item.position.x, posY = item.position.y + 0.3, posZ = item.position.z,
-            rotX = 0, rotY = 180, rotZ = 0,
+            rotX = 0, rotY = 0, rotZ = 0, -- rotY=0: verso para cima (face escondida, como um deck normal)
             scaleX = 1, scaleY = 1, scaleZ = 1,
         },
         Nickname   = item.name,
