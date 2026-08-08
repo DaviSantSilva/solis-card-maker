@@ -115,13 +115,35 @@ end
 -- é revertida e ignorada. Não há como TTS desabilitar visualmente
 -- um painel global só para alguns jogadores (é compartilhado),
 -- então a trava real acontece aqui no código.
+--
+-- Exclusividade manual (radio-like) em vez de <ToggleGroup>:
+-- o componente nativo do TTS apresentou comportamento instável,
+-- então cada grupo desmarca os irmãos via código ao marcar um.
+
+local PLAYERS_IDS = { "players_1", "players_2", "players_3", "players_4", "players_5" }
+local LOCALE_IDS  = { "locale_pt", "locale_en", "locale_es", "locale_fr", "locale_de", "locale_zh" }
+local MODE_IDS    = { "mode_auto", "mode_manual" }
+
+-- Marca `selectedId` como true e todos os outros do grupo como false.
+local function enforceSingleSelection(allIds, selectedId)
+    for _, id in ipairs(allIds) do
+        Global.UI.setAttribute(id, "isOn", tostring(id == selectedId))
+    end
+end
 
 function onPlayersToggle(playerColor, value, id)
     if not isHost(playerColor) then
         Global.UI.setAttribute(id, "isOn", tostring(value ~= "True"))
         return
     end
-    if value ~= "True" then return end
+
+    if value ~= "True" then
+        -- impede ficar sem nenhuma opção marcada: reforça a seleção atual
+        Global.UI.setAttribute(id, "isOn", "true")
+        return
+    end
+
+    enforceSingleSelection(PLAYERS_IDS, id)
     setupState.players = tonumber(id:match("players_(%d)"))
 end
 
@@ -130,7 +152,13 @@ function onLocaleToggle(playerColor, value, id)
         Global.UI.setAttribute(id, "isOn", tostring(value ~= "True"))
         return
     end
-    if value ~= "True" then return end
+
+    if value ~= "True" then
+        Global.UI.setAttribute(id, "isOn", "true")
+        return
+    end
+
+    enforceSingleSelection(LOCALE_IDS, id)
     setupState.locale = id:match("locale_(%a+)")
 end
 
@@ -139,7 +167,13 @@ function onModeToggle(playerColor, value, id)
         Global.UI.setAttribute(id, "isOn", tostring(value ~= "True"))
         return
     end
-    if value ~= "True" then return end
+
+    if value ~= "True" then
+        Global.UI.setAttribute(id, "isOn", "true")
+        return
+    end
+
+    enforceSingleSelection(MODE_IDS, id)
     setupState.mode = id:match("mode_(%a+)")
 end
 

@@ -40,13 +40,11 @@
       <VerticalLayout spacing="10">
         <Text class="heading" text="Jogadores" height="22"/>
         <HorizontalLayout spacing="20" height="34">
-          <ToggleGroup id="playersGroup">
             <Toggle id="players_1" text="1" onValueChanged="onPlayersToggle"/>
             <Toggle id="players_2" text="2" onValueChanged="onPlayersToggle"/>
             <Toggle id="players_3" text="3" onValueChanged="onPlayersToggle"/>
             <Toggle id="players_4" text="4" onValueChanged="onPlayersToggle"/>
             <Toggle id="players_5" text="5" onValueChanged="onPlayersToggle" isOn="true"/>
-          </ToggleGroup>
         </HorizontalLayout>
       </VerticalLayout>
 
@@ -57,14 +55,12 @@
       <VerticalLayout spacing="10">
         <Text class="heading" text="Idioma" height="22"/>
         <GridLayout cellSize="90 34" spacing="12 10" constraintCount="3" height="80">
-          <ToggleGroup id="localeGroup">
             <Toggle id="locale_pt" text="PT" onValueChanged="onLocaleToggle" isOn="true"/>
             <Toggle id="locale_en" text="EN" onValueChanged="onLocaleToggle"/>
             <Toggle id="locale_es" text="ES" onValueChanged="onLocaleToggle"/>
             <Toggle id="locale_fr" text="FR" onValueChanged="onLocaleToggle"/>
             <Toggle id="locale_de" text="DE" onValueChanged="onLocaleToggle"/>
             <Toggle id="locale_zh" text="ZH" onValueChanged="onLocaleToggle"/>
-          </ToggleGroup>
         </GridLayout>
       </VerticalLayout>
 
@@ -74,10 +70,8 @@
       <VerticalLayout spacing="10">
         <Text class="heading" text="Modo de setup" height="22"/>
         <HorizontalLayout spacing="24" height="34">
-          <ToggleGroup id="modeGroup">
             <Toggle id="mode_auto"   text="Automático" onValueChanged="onModeToggle" isOn="true"/>
             <Toggle id="mode_manual" text="Manual"     onValueChanged="onModeToggle"/>
-          </ToggleGroup>
         </HorizontalLayout>
         <Text class="label" text="Automático: entrega os decks direto aos jogadores sentados. Manual: empilha tudo fora da mesa." height="34"/>
       </VerticalLayout>
