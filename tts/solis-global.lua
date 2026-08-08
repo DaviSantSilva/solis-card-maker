@@ -80,8 +80,7 @@ end
 -- URL do bucket público do Supabase Storage
 local STORAGE_BASE = "https://pnsolmogjbsqepbisxqy.supabase.co/storage/v1/object/public/cards"
 
--- TODO: ajustar após o deploy do Card Maker na Vercel
-local CARD_BACK_URL = "https://SEU-DOMINIO-AQUI.vercel.app/card-back.png"
+local CARD_BACK_URL = "https://pnsolmogjbsqepbisxqy.supabase.co/storage/v1/object/public/cards/card%20back.png"
 
 local MANIFEST_URL = {
     pt = STORAGE_BASE .. "/manifest.json",
