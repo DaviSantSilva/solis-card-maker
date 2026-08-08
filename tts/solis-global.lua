@@ -257,8 +257,25 @@ function buildDeckLists(manifest)
         end
     end
 
-    Global.UI.setValue("setupStatusText", "Gerando cartas…")
-    spawnAllDecks(mainDeckCards, corpDeckCards)
+    -- DIAGNÓSTICO: mostra os totais calculados a partir do manifest,
+    -- ANTES de qualquer spawn. Isola se o problema está na leitura/
+    -- classificação dos dados ou na geração das cartas na mesa.
+    local function sumQty(list)
+        local s = 0
+        for _, c in ipairs(list) do s = s + c.quantity end
+        return s
+    end
+
+    local diag = string.format("Mercado: %d cópias (%d designs)", sumQty(mainDeckCards), #mainDeckCards)
+    for _, corp in ipairs({ "tabajara", "zenite", "atomic", "atto", "core" }) do
+        diag = diag .. string.format(" | %s: %d (%d designs)", corp, sumQty(corpDeckCards[corp]), #corpDeckCards[corp])
+    end
+    print("[Solis] " .. diag)
+    Global.UI.setValue("setupStatusText", diag)
+    Wait.time(function()
+        Global.UI.setValue("setupStatusText", "Gerando cartas…")
+        spawnAllDecks(mainDeckCards, corpDeckCards)
+    end, 3) -- pausa para dar tempo de ler o diagnóstico antes de continuar
 end
 
 -- ── geração das cartas na mesa (em lotes, para não sobrecarregar) ──
