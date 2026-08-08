@@ -17,7 +17,7 @@
   <Toggle textColor="#eceef3" fontSize="16"/>
 </Defaults>
 
-<Panel id="solisSetupPanel" position="0 260 0" width="620" height="740"
+<Panel id="solisSetupPanel" rectAlignment="MiddleCenter" position="0 0 0" width="620" height="740"
        color="#0c0d0fee" outline="#252930" outlineSize="2 2"
        allowDragging="true" returnToOriginalPositionWhenReleased="false">
 
@@ -91,5 +91,5 @@
 
 <!-- botão discreto para reabrir o painel depois de fechado -->
 <Button id="reopenPanelButton" text="⚙ Configurar Mesa" onClick="onReopenClick"
-        position="0 -300 0" width="220" height="46"
+        rectAlignment="LowerCenter" position="0 30 0" width="220" height="46"
         color="#131518" textColor="#8892a4" fontSize="15" active="false"/>

@@ -189,6 +189,15 @@ function onReopenClick()
     Global.UI.setAttribute("reopenPanelButton", "active", "false")
 end
 
+-- Comando de emergência via console (~), caso o botão de fechar
+-- não responda por qualquer motivo visual: digite /fecharsolis
+function onChat(message, sender)
+    if message == "/fecharsolis" then
+        onCloseClick()
+        return false
+    end
+end
+
 local isSpawning = false
 
 function onStartSetupClick(player)
