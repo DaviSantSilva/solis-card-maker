@@ -373,7 +373,11 @@ function processSpawnQueue(index)
         Name      = "CardCustom",
         Transform = {
             posX = item.position.x, posY = item.position.y + 0.3, posZ = item.position.z,
-            rotX = 0, rotY = 0, rotZ = 0, -- rotY=0: verso para cima (face escondida, como um deck normal)
+            -- rotY=180: mantém a orientação de leitura correta (era o valor original)
+            -- rotZ=180: vira a carta para mostrar o verso — girar em Y só gira
+            -- no próprio plano (como ponteiro de relógio), não troca qual lado
+            -- fica visível; quem troca face/verso é o eixo Z
+            rotX = 0, rotY = 180, rotZ = 180,
             scaleX = 1, scaleY = 1, scaleZ = 1,
         },
         Nickname   = item.name,
