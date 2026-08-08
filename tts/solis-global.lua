@@ -105,9 +105,11 @@ local panelOpen = true
 -- O TTS carrega esse XML automaticamente — nenhuma chamada de
 -- Global.UI.setXml() é necessária aqui.
 
-local function isHost(playerColor)
-    local p = Player[playerColor]
-    return p ~= nil and p.host == true
+-- No XmlUI (onValueChanged/onClick), o TTS passa o OBJETO Player
+-- diretamente como primeiro argumento — não uma string de cor.
+-- (Isso é diferente de createButton, onde o 2º argumento É a cor.)
+local function isHost(player)
+    return player ~= nil and player.host == true
 end
 
 -- ── handlers dos toggles — travados para não-host ────────────
@@ -131,14 +133,13 @@ local function enforceSingleSelection(allIds, selectedId)
     end
 end
 
-function onPlayersToggle(playerColor, value, id)
-    if not isHost(playerColor) then
+function onPlayersToggle(player, value, id)
+    if not isHost(player) then
         Global.UI.setAttribute(id, "isOn", tostring(value ~= "True"))
         return
     end
 
     if value ~= "True" then
-        -- impede ficar sem nenhuma opção marcada: reforça a seleção atual
         Global.UI.setAttribute(id, "isOn", "true")
         return
     end
@@ -147,8 +148,8 @@ function onPlayersToggle(playerColor, value, id)
     setupState.players = tonumber(id:match("players_(%d)"))
 end
 
-function onLocaleToggle(playerColor, value, id)
-    if not isHost(playerColor) then
+function onLocaleToggle(player, value, id)
+    if not isHost(player) then
         Global.UI.setAttribute(id, "isOn", tostring(value ~= "True"))
         return
     end
@@ -162,8 +163,8 @@ function onLocaleToggle(playerColor, value, id)
     setupState.locale = id:match("locale_(%a+)")
 end
 
-function onModeToggle(playerColor, value, id)
-    if not isHost(playerColor) then
+function onModeToggle(player, value, id)
+    if not isHost(player) then
         Global.UI.setAttribute(id, "isOn", tostring(value ~= "True"))
         return
     end
@@ -189,8 +190,8 @@ function onReopenClick()
     Global.UI.setAttribute("reopenPanelButton", "active", "false")
 end
 
-function onStartSetupClick(playerColor)
-    if not isHost(playerColor) then
+function onStartSetupClick(player)
+    if not isHost(player) then
         Global.UI.setValue("setupStatusText", "Apenas o host pode iniciar o setup.")
         return
     end

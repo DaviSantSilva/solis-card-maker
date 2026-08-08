@@ -17,7 +17,7 @@
   <Toggle textColor="#eceef3" fontSize="16"/>
 </Defaults>
 
-<Panel id="solisSetupPanel" position="0 260 0" width="620" height="560"
+<Panel id="solisSetupPanel" position="0 260 0" width="620" height="740"
        color="#0c0d0fee" outline="#252930" outlineSize="2 2"
        allowDragging="true" returnToOriginalPositionWhenReleased="false">
 
@@ -73,15 +73,16 @@
             <Toggle id="mode_auto"   text="Automático" onValueChanged="onModeToggle" isOn="true"/>
             <Toggle id="mode_manual" text="Manual"     onValueChanged="onModeToggle"/>
         </HorizontalLayout>
-        <Text class="label" text="Automático: entrega os decks direto aos jogadores sentados. Manual: empilha tudo fora da mesa." height="34"/>
+        <Text class="label" text="Automático: entrega os decks direto aos jogadores sentados nas cores das corporações." height="34"/>
+        <Text class="label" text="Manual: gera todos os decks empilhados fora da mesa, para você distribuir." height="34"/>
       </VerticalLayout>
 
       <!-- status -->
       <Text id="setupStatusText" text="" fontSize="14" color="#f59e0b" height="24" alignment="MiddleCenter"/>
 
       <!-- ação -->
-      <Button id="startSetupButton" text="INICIAR SETUP" onClick="onStartSetupClick"
-              height="58" fontSize="20" fontStyle="bold"
+      <Button id="startSetupButton" text="COMEÇAR" onClick="onStartSetupClick"
+              height="58" fontSize="22" fontStyle="bold"
               colors="#3b82f6|#2563eb|#1d4ed8|#1a1d22" textColor="#ffffff"/>
 
     </VerticalLayout>
