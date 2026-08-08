@@ -405,4 +405,30 @@ function mergeAllPendingDecks()
         end
     end
     decksByPositionKey = {}
+
+    -- DIAGNÓSTICO PÓS-SPAWN: conta o que REALMENTE existe em cada
+    -- posição depois de tudo pronto — compara contra o diagnóstico
+    -- pré-spawn para confirmar se a duplicação acontece antes ou
+    -- depois da geração das cartas.
+    Wait.time(function()
+        local function countAt(pos)
+            local hits = Physics.cast({
+                origin = { pos.x, pos.y + 3, pos.z }, direction = { 0, -1, 0 },
+                type = 2, size = { 3, 6, 3 }, max_distance = 6,
+            })
+            for _, hit in ipairs(hits) do
+                local obj = hit.hit_object
+                if obj.type == "Deck" then return obj.getQuantity() end
+                if obj.type == "Card" then return 1 end
+            end
+            return 0
+        end
+
+        local report = "Na mesa — mercado: " .. countAt(POSITIONS.market.deck)
+        for _, corp in ipairs({ "tabajara", "zenite", "atomic", "atto", "core" }) do
+            report = report .. " | " .. corp .. ": " .. countAt(POSITIONS.corp[corp].deck)
+        end
+        print("[Solis] " .. report)
+        Global.UI.setValue("setupStatusText", report)
+    end, 1)
 end
