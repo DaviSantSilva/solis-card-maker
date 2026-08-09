@@ -53,6 +53,8 @@ como ✅ é uma regressão e deve ser corrigida antes do commit.
 | 3.5 | "Começar" é idempotente — clicar de novo não duplica | `clearAllTargetPositions()` remove tudo nas 6 posições (busca ampla 3×6×3, `max_distance=6`) antes de gerar as novas |
 | 3.6 | Clique duplo durante o processamento é bloqueado | `isSpawning` trava o botão (`interactable=false`) até `mergeAllPendingDecks` terminar ou um erro ocorrer |
 | 3.7 | Diagnóstico pós-spawn bate com o pré-spawn | Contagem real na mesa (`getQuantity()` por posição) == diagnóstico calculado do manifest |
+| 3.8 | Todos os decks são embaralhados ao final | `shuffleAllDecks()` chama `.shuffle()` em cada posição de `positionByKey` — cobre tanto modo Automático quanto Manual (posições deslocadas) |
+| 3.9 | Mercado é preenchido automaticamente ao final | `fillMarketSlotsFromDeck()` vira as 6 cartas do topo do deck do mercado para as zonas de compra, face para cima, staggered para evitar colisão física |
 
 ---
 
