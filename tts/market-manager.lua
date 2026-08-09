@@ -83,7 +83,7 @@ function attachBuyButton(card, slotIndex)
         click_function = "onBuyClick_" .. slotIndex,
         function_owner = self,
         label          = "Comprar",
-        position       = { 0, 0.3, 0 },
+        position       = { 0, 0.3, 1.05 }, -- deslocado para baixo da carta, não em cima
         rotation       = { 0, 0, 0 },
         width          = 900,
         height         = 280,
