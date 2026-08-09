@@ -89,17 +89,24 @@ como ✅ é uma regressão e deve ser corrigida antes do commit.
 
 ---
 
-## 6. Market Manager (`market-manager.lua`)
+## 6. Market Manager (`market-manager.lua`) — arquitetura v2, Layout Zones
+
+> Reescrito para usar `LayoutZone` nativas do TTS em vez de `Physics.cast`
+> para detectar cartas. Botão de compra vive na **zona** (fixo), não mais
+> na carta — simplifica bastante a lógica de "Limpar mercado".
 
 | # | Comportamento | Critério de aprovação |
 |---|---|---|
-| 6.1 | 6 zonas de compra preenchidas ao carregar | `fillAllSlots()` popula do deck do mercado, 2s após `onLoad` |
-| 6.2 | Cada carta em zona de compra tem botão "Comprar" | Botão anexado à própria carta (`card.createButton`), não à zona |
-| 6.3 | Comprar move a carta para o descarte da corp certa | `Global.call("getCorpForColor", playerColor)` identifica a corp pela cor da cadeira do comprador |
-| 6.4 | Zona vazia (compra individual) é reabastecida automaticamente | `refillSlotIfEmpty` puxa do deck do mercado |
-| 6.5 | "Limpar mercado" funciona como esteira, não reposição direta | Descarta 5 e 6 SEM repor → desloca 4→6, 3→5, 2→4, 1→3 (ordem direita→esquerda) → só 1 e 2 recebem carta nova do deck |
-| 6.6 | Botão de compra é reindexado a cada movimento na esteira | `card.clearButtons()` + `attachBuyButton(card, novoSlotIndex)` — sem isso, uma carta deslocada dispararia a compra do slot antigo |
-| 6.7 | Compras são bloqueadas durante a transição da esteira | `marketLocked` impede clique em "Comprar" enquanto o deslocamento está em andamento |
+| 6.1 | 6 Layout Zones são criadas automaticamente ao carregar | `spawnObject(type="LayoutZone")` em cada `POSITIONS.market.slots[i]`, sem precisar desenhar manualmente no F3 |
+| 6.2 | Zonas são 5% maiores que uma carta padrão | `CARD_WIDTH * 1.05`, `CARD_LENGTH * 1.05` (`ZONE_SCALE_MULT`) |
+| 6.3 | Cartas e zonas ficam alinhadas lateralmente ao deck do mercado | `POSITIONS.market.slots` no Global tem Z idêntico ao `market.deck.z` em todas as 6 posições |
+| 6.4 | Botão "Comprar" fixo na zona, 5% abaixo da borda inferior | `zone.createButton()` (não `card.createButton()`), offset Z = `(zoneLength/2) + (zoneLength * 0.05)` |
+| 6.5 | 6 zonas preenchidas ao carregar | `fillAllSlots()`, 2s após `onLoad` |
+| 6.6 | Comprar move a carta para o descarte da corp certa | `Global.call("getCorpForColor", playerColor)` identifica a corp pela cor da cadeira do comprador |
+| 6.7 | Zona vazia (compra individual) é reabastecida automaticamente | `refillSlotIfEmpty` detecta vazio via `zone.getObjects()` e puxa do deck do mercado |
+| 6.8 | "Limpar mercado" funciona como esteira, não reposição direta | Descarta 5 e 6 SEM repor → desloca 4→6, 3→5, 2→4, 1→3 (ordem direita→esquerda) → só 1 e 2 recebem carta nova do deck |
+| 6.9 | Esteira NÃO precisa reindexar nenhum botão | Botão pertence à zona (fixa) — mover a carta com `shiftCardToZone()` é só `setPositionSmooth`, sem `clearButtons`/`createButton` |
+| 6.10 | Compras são bloqueadas durante a transição da esteira | `marketLocked` impede clique em "Comprar" enquanto o deslocamento está em andamento |
 
 ---
 
