@@ -44,8 +44,16 @@ local function createZone(name, pos, onReady)
 
     spawnObject({
         type     = "LayoutZone",
-        position = { pos.x, pos.y + 0.5, pos.z },
-        scale    = { zoneWidth, 2, zoneLength },
+        -- Mesma altura das cartas (pos.y + 0.3, igual usado em
+        -- refillSlotIfEmpty) — zona e botão ficam rente ao nível
+        -- real das cartas na mesa, não flutuando nem embaixo dela.
+        position = { pos.x, pos.y + 0.3, pos.z },
+        -- Y de escala reduzido de 2 para 0.5 — volume vertical
+        -- menor o suficiente para detectar cartas, mas evita que
+        -- deslocamentos locais no botão sejam amplificados pela
+        -- escala do objeto (era a causa do botão parar embaixo
+        -- da mesa com um offset negativo maior).
+        scale    = { zoneWidth, 0.5, zoneLength },
         callback_function = function(zone)
             zone.setName(name)
             zone.LayoutZone.setOptions({
@@ -66,16 +74,16 @@ local function createMarketZone(slotIndex, slotPos)
         -- ser recriado quando a carta muda, já que fica anexado à
         -- zona, que nunca se move.
         --
-        -- Y local negativo compensa a elevação da zona (spawnada em
-        -- pos.y + 0.5) para o botão ficar rente à mesa, não flutuando.
-        -- Z local negativo posiciona o botão do lado de baixo da zona
-        -- (positivo ficava do lado de cima, invertido do esperado).
+        -- Y local = 0: a zona já nasce na mesma altura das cartas
+        -- (ver createZone), então não precisa de nenhum offset
+        -- vertical — evita a amplificação pela escala do objeto.
+        -- Z local negativo posiciona o botão do lado de baixo da zona.
         local buttonZOffset = -((zoneLength / 2) + (zoneLength * BUTTON_GAP_MULT))
         zone.createButton({
             click_function = "onBuyClick_" .. slotIndex,
             function_owner = self,
             label          = "Comprar",
-            position       = { 0, -0.45, buttonZOffset },
+            position       = { 0, 0, buttonZOffset },
             rotation       = { 0, 0, 0 },
             width          = 720,  -- 900 - 20%
             height         = 224,  -- 280 - 20%
@@ -154,6 +162,15 @@ function refillSlotIfEmpty(slotIndex)
             rotation = { 0, 180, 0 }, -- face para cima
             smooth   = true,
         })
+        -- Puxar cartas do topo acumula um pequeno torque físico no
+        -- deck restante (fica torto/"tilt"). Corrige a rotação do
+        -- deck do mercado logo depois de cada extração.
+        Wait.time(function()
+            local remaining = findMarketDeck()
+            if remaining ~= nil and remaining.type == "Deck" then
+                remaining.setRotationSmooth({ 0, 180, 180 }, false, true)
+            end
+        end, 0.5)
     else
         deckPile.setPositionSmooth(target, false, true)
         deckPile.setRotationSmooth({ 0, 180, 0 }, false, true)
