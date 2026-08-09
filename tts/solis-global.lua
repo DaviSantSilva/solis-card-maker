@@ -56,13 +56,15 @@ POSITIONS = {
     market = {
         deck    = { x = -12.40, y = 1.69, z = -13.28 },
         discard = { x = 10.83,  y = 1.69, z = -13.24 },
+        -- Z alinhado ao deck (-13.28) em todas — mantém cartas e zonas
+        -- em linha reta, lateralmente alinhadas ao deck do mercado.
         slots = {
             { x = -9.11, y = 1.69, z = -13.28 },
-            { x = -5.65, y = 1.69, z = -13.18 },
-            { x = -2.37, y = 1.69, z = -13.12 },
-            { x = 0.91,  y = 1.69, z = -13.15 },
-            { x = 4.23,  y = 1.69, z = -13.25 },
-            { x = 7.58,  y = 1.69, z = -13.25 },
+            { x = -5.65, y = 1.69, z = -13.28 },
+            { x = -2.37, y = 1.69, z = -13.28 },
+            { x = 0.91,  y = 1.69, z = -13.28 },
+            { x = 4.23,  y = 1.69, z = -13.28 },
+            { x = 7.58,  y = 1.69, z = -13.28 },
         },
     },
 }
