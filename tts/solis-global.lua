@@ -539,6 +539,16 @@ local function fillMarketSlotsFromDeck()
             end
         end, (i - 1) * 0.25)
     end
+
+    -- Puxar cartas repetidamente do topo acumula um pequeno torque
+    -- físico no deck restante (fica torto/"tilt"). Corrige a rotação
+    -- do deck do mercado depois que todas as extrações terminam.
+    Wait.time(function()
+        local remaining = findPileWide(POSITIONS.market.deck)
+        if remaining ~= nil then
+            remaining.setRotationSmooth({ 0, 180, 180 }, false, true)
+        end
+    end, #POSITIONS.market.slots * 0.25 + 0.4)
 end
 
 -- Embaralha todo deck encontrado em cada posição realmente usada
@@ -572,7 +582,8 @@ function mergeAllPendingDecks()
         Wait.time(function()
             fillMarketSlotsFromDeck()
 
-            -- 3. Diagnóstico pós-spawn (conta o que realmente existe)
+            -- 3. Diagnóstico (só no console, para debug) + mensagem
+            --    amigável na UI + fecha o painel automaticamente
             Wait.time(function()
                 local function countAt(pos)
                     local obj = findPileWide(pos)
@@ -585,8 +596,13 @@ function mergeAllPendingDecks()
                 for _, corp in ipairs({ "tabajara", "zenite", "atomic", "atto", "core" }) do
                     report = report .. " | " .. corp .. ": " .. countAt(POSITIONS.corp[corp].deck)
                 end
-                print("[Solis] " .. report)
-                Global.UI.setValue("setupStatusText", report)
+                print("[Solis] " .. report) -- mantido só no console, para debug futuro
+
+                Global.UI.setValue("setupStatusText", "Aproveite o jogo, boa sorte!")
+
+                Wait.time(function()
+                    onCloseClick()
+                end, 5)
             end, 2)
         end, 1)
     end, 0.6)
