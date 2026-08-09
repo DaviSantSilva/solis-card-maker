@@ -75,12 +75,18 @@ local function createMarketZone(slotIndex, slotPos)
         -- zona, que nunca se move.
         --
         -- Y local = 0: a zona já nasce na mesma altura das cartas
-        -- (ver createZone), então não precisa de nenhum offset
-        -- vertical — evita a amplificação pela escala do objeto.
-        -- Z local negativo posiciona o botão do lado de baixo da zona.
-        -- Offset fixo calculado para posição absoluta de mesa Z=-15.78
-        -- (zona fica em z=-13.28, então local = -15.78 - (-13.28) = -2.50)
-        local buttonZOffset = -2.50
+        -- IMPORTANTE: createButton usa posição LOCAL ao objeto pai,
+        -- e essa posição é AMPLIFICADA pela escala do pai (a zona
+        -- tem scale ≈ {2.31, 0.5, 3.31}, não {1,1,1}). Um offset de
+        -- mundo desejado precisa ser DIVIDIDO pela escala do eixo
+        -- correspondente para virar o offset local correto:
+        --   local = (mundo_desejado - mundo_da_zona) / escala_da_zona
+        --
+        -- Posição absoluta de mesa desejada: Z = -15.78
+        -- Zona fica em z = -13.28 (mundo) → offset mundo = -2.50
+        -- Escala Z da zona (zoneLength) ≈ 3.3075
+        -- local Z = -2.50 / 3.3075 ≈ -0.756
+        local buttonZOffset = -0.756
         zone.createButton({
             click_function = "onBuyClick_" .. slotIndex,
             function_owner = self,
@@ -113,14 +119,25 @@ function onLoad()
     -- com o botão 'Limpar mercado' à direita dela (deslocamento
     -- no eixo X local, não no Z — não é um botão de compra abaixo).
     createZone("Descarte do Mercado", market.discard, function(zone, zoneLength, zoneWidth)
-        -- Offset fixo calculado para posição absoluta de mesa X=14.25
-        -- (zona de descarte fica em x=10.83, então local = 14.25 - 10.83 = 3.42)
-        local buttonXOffset = 3.42
+        -- Mesma correção de escala explicada em createMarketZone.
+        -- Zona de descarte fica em mundo {10.83, 1.99, -13.24}
+        -- (y = 1.69 + 0.3, ver createZone). Posição absoluta
+        -- desejada: {14.28, 2.18, -13.32}.
+        --
+        -- offset mundo = desejado - zona = {3.45, 0.19, -0.08}
+        -- escala da zona = {zoneWidth≈2.31, 0.5, zoneLength≈3.31}
+        -- local = offset mundo / escala:
+        --   x = 3.45 / 2.31  ≈ 1.494
+        --   y = 0.19 / 0.5   = 0.380
+        --   z = -0.08 / 3.31 ≈ -0.024
+        local buttonXOffset = 1.494
+        local buttonYOffset = 0.380
+        local buttonZOffset = -0.024
         zone.createButton({
             click_function = "onClearMarketClick",
             function_owner = self,
             label          = "Limpar\nmercado",
-            position       = { buttonXOffset, 0, 0 },
+            position       = { buttonXOffset, buttonYOffset, buttonZOffset },
             rotation       = { 0, 180, 0 },
             width          = 612,
             height         = 350,
