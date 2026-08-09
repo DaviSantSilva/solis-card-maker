@@ -29,54 +29,63 @@ local marketLocked  = false
 
 -- Cria uma LayoutZone genérica (5% maior que uma carta), usada
 -- tanto pelas zonas de compra quanto pela zona de descarte.
-local function createZone(name, pos)
+-- Cria uma LayoutZone genérica (5% maior que uma carta), usada
+-- tanto pelas zonas de compra quanto pela zona de descarte.
+--
+-- Usa callback_function do próprio spawnObject — a API específica
+-- .LayoutZone só fica disponível depois que o objeto termina de
+-- inicializar, o que não é garantido no mesmo frame do spawn.
+-- Chamar zone.LayoutZone.setOptions() direto (sem esperar o
+-- callback) pode falhar silenciosamente e travar o resto do
+-- onLoad, impedindo qualquer zona/botão seguinte de ser criado.
+local function createZone(name, pos, onReady)
     local zoneWidth  = CARD_WIDTH  * ZONE_SCALE_MULT
     local zoneLength = CARD_LENGTH * ZONE_SCALE_MULT
 
-    local zone = spawnObject({
+    spawnObject({
         type     = "LayoutZone",
         position = { pos.x, pos.y + 0.5, pos.z },
         scale    = { zoneWidth, 2, zoneLength },
+        callback_function = function(zone)
+            zone.setName(name)
+            zone.LayoutZone.setOptions({
+                max_objects_per_group = 1,
+                combine_into_decks    = false,
+                trigger_for_face_down = true,
+                trigger_for_face_up   = true,
+                instant_refill        = false,
+            })
+            if onReady then onReady(zone, zoneLength) end
+        end,
     })
-    zone.setName(name)
-
-    zone.LayoutZone.setOptions({
-        max_objects_per_group = 1,
-        combine_into_decks    = false,
-        trigger_for_face_down = true,
-        trigger_for_face_up   = true,
-        instant_refill        = false,
-    })
-
-    return zone, zoneLength
 end
 
 local function createMarketZone(slotIndex, slotPos)
-    local zone, zoneLength = createZone("Mercado " .. slotIndex, slotPos)
+    createZone("Mercado " .. slotIndex, slotPos, function(zone, zoneLength)
+        -- Botão de compra fixo na zona (não na carta) — não precisa
+        -- ser recriado quando a carta muda, já que fica anexado à
+        -- zona, que nunca se move.
+        --
+        -- Y local negativo compensa a elevação da zona (spawnada em
+        -- pos.y + 0.5) para o botão ficar rente à mesa, não flutuando.
+        -- Z local negativo posiciona o botão do lado de baixo da zona
+        -- (positivo ficava do lado de cima, invertido do esperado).
+        local buttonZOffset = -((zoneLength / 2) + (zoneLength * BUTTON_GAP_MULT))
+        zone.createButton({
+            click_function = "onBuyClick_" .. slotIndex,
+            function_owner = self,
+            label          = "Comprar",
+            position       = { 0, -0.45, buttonZOffset },
+            rotation       = { 0, 0, 0 },
+            width          = 720,  -- 900 - 20%
+            height         = 224,  -- 280 - 20%
+            font_size      = 112,  -- 140 - 20%
+            color          = { 0.15, 0.4, 0.2 },
+            font_color     = { 1, 1, 1 },
+        })
 
-    -- Botão de compra fixo na zona (não na carta) — não precisa
-    -- ser recriado quando a carta muda, já que fica anexado à
-    -- zona, que nunca se move.
-    --
-    -- Y local negativo compensa a elevação da zona (spawnada em
-    -- pos.y + 0.5) para o botão ficar rente à mesa, não flutuando.
-    -- Z local negativo posiciona o botão do lado de baixo da zona
-    -- (positivo ficava do lado de cima, invertido do esperado).
-    local buttonZOffset = -((zoneLength / 2) + (zoneLength * BUTTON_GAP_MULT))
-    zone.createButton({
-        click_function = "onBuyClick_" .. slotIndex,
-        function_owner = self,
-        label          = "Comprar",
-        position       = { 0, -0.45, buttonZOffset },
-        rotation       = { 0, 0, 0 },
-        width          = 720,  -- 900 - 20%
-        height         = 224,  -- 280 - 20%
-        font_size      = 112,  -- 140 - 20%
-        color          = { 0.15, 0.4, 0.2 },
-        font_color     = { 1, 1, 1 },
-    })
-
-    zones[slotIndex] = zone
+        zones[slotIndex] = zone
+    end)
 end
 
 function onLoad()
