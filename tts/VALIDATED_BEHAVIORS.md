@@ -27,6 +27,8 @@ como ✅ é uma regressão e deve ser corrigida antes do commit.
 | 1.8 | Botão fechar (✕) fecha o painel | `solisSetupPanel.active` vira `false`, `reopenPanelButton.active` vira `true` |
 | 1.9 | Botão de reabrir é discreto | Apenas ícone "⚙", 44×44px, canto inferior direito (`rectAlignment="LowerRight"`) |
 | 1.10 | Comando de emergência `/fecharsolis` funciona | Digitar no chat fecha o painel independente do estado dos botões |
+| 1.11 | Botões/painéis soltos de UI se movem corretamente do `rectAlignment` | Usar `offsetXY="x y"`, nunca `position="x y z"` — este último é ignorado em UI 2D solta, o elemento fica preso no ponto de ancoragem |
+| 1.12 | Colar novo conteúdo na aba UI não deixa elementos duplicados | Sempre Ctrl+A + Delete + confirmar caixa vazia antes de colar. IDs duplicados fazem `setAttribute`/`onCloseClick` só afetar uma cópia, deixando a outra travada na tela |
 
 ---
 
@@ -107,3 +109,5 @@ como ✅ é uma regressão e deve ser corrigida antes do commit.
 - **Eixo de rotação de cartas:** Y gira no próprio plano (não troca face/verso). Z troca face/verso. Não confundir (item 3.2).
 - **`Locked` não tem default seguro:** sempre declarar explicitamente em qualquer novo `ObjectState` gerado via `spawnObjectData` (item 3.1).
 - **Copiar/colar do chat para o TTS pode corromper o script:** se um erro de sintaxe aparecer mesmo com o código validando limpo em `luac`, suspeitar de corrupção no clipboard antes de investigar lógica. Processo seguro: baixar o arquivo, copiar de um editor de texto puro, colar substituindo tudo.
+- **Colar sem limpar a caixa primeiro duplica IDs:** se um painel some ao fechar mas continua bloqueando a tela (ex: precisa de ESC para ver a mesa), suspeitar de dois elementos com o mesmo `id` — provavelmente o conteúdo antigo não foi apagado antes de colar o novo. `onCloseClick`/`setAttribute` por ID só afeta a primeira ocorrência, deixando a duplicata visível. Sempre Ctrl+A + Delete, confirmar caixa vazia, só então colar.
+- **`offsetXY` vs `position` em elementos de UI 2D:** `offsetXY="x y"` é o atributo correto para deslocar um elemento de UI (Panel/Button/etc.) a partir do seu `rectAlignment` — é posicionamento em pixels na tela. `position="x y z"` é para posição 3D no mundo (objetos físicos, ou elementos de UI ancorados a um objeto específico) e é **ignorado silenciosamente** em elementos soltos de UI 2D — o elemento fica sempre exatamente no ponto de ancoragem do `rectAlignment`, nunca se move, não importa o valor. Sintoma: mudar os números não tem nenhum efeito visível. Sempre usar `offsetXY` para reposicionar botões/painéis na tela (item 1.11).
