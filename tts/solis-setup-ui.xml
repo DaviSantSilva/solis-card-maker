@@ -91,5 +91,5 @@
 
 <!-- botão discreto para reabrir o painel depois de fechado -->
 <Button id="reopenPanelButton" text="⚙" onClick="onReopenClick"
-        rectAlignment="LowerRight" offsetXY="-30 30" width="44" height="44"
+        rectAlignment="LowerRight" offsetXY="-30 90" width="44" height="44"
         color="#131518cc" textColor="#8892a4" fontSize="20" active="false"/>
