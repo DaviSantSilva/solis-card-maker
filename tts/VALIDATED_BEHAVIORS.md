@@ -107,6 +107,7 @@ como ✅ é uma regressão e deve ser corrigida antes do commit.
 | 6.8 | "Limpar mercado" funciona como esteira, não reposição direta | Descarta 5 e 6 SEM repor → desloca 4→6, 3→5, 2→4, 1→3 (ordem direita→esquerda) → só 1 e 2 recebem carta nova do deck |
 | 6.9 | Esteira NÃO precisa reindexar nenhum botão | Botão pertence à zona (fixa) — mover a carta com `shiftCardToZone()` é só `setPositionSmooth`, sem `clearButtons`/`createButton` |
 | 6.10 | Compras são bloqueadas durante a transição da esteira | `marketLocked` impede clique em "Comprar" enquanto o deslocamento está em andamento |
+| 6.11 | Botão "Limpar mercado" fica na zona de descarte, à direita dela | Anexado via `createButton` com offset no eixo X (`buttonXOffset`), não Z — diferencia de um botão de compra abaixo |
 | 6.11 | Zona de descarte segue o mesmo padrão das zonas de compra | `createZone()` compartilhado — 5% maior que carta, alinhada lateralmente (mesmo Z do deck), sem botão |
 | 6.12 | Botão de compra fica na mesma altura das cartas | Zona nasce em `pos.y + 0.3` (igual ao target das cartas), botão usa Y local = 0 — sem offset vertical algum |
 | 6.13 | Botão de compra fica abaixo da zona, não acima | Z local negativo — positivo posicionava do lado errado |
