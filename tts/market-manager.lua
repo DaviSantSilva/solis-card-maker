@@ -78,7 +78,9 @@ local function createMarketZone(slotIndex, slotPos)
         -- (ver createZone), então não precisa de nenhum offset
         -- vertical — evita a amplificação pela escala do objeto.
         -- Z local negativo posiciona o botão do lado de baixo da zona.
-        local buttonZOffset = -((zoneLength / 2) + (zoneLength * BUTTON_GAP_MULT))
+        -- Offset fixo calculado para posição absoluta de mesa Z=-15.78
+        -- (zona fica em z=-13.28, então local = -15.78 - (-13.28) = -2.50)
+        local buttonZOffset = -2.50
         zone.createButton({
             click_function = "onBuyClick_" .. slotIndex,
             function_owner = self,
@@ -111,7 +113,9 @@ function onLoad()
     -- com o botão 'Limpar mercado' à direita dela (deslocamento
     -- no eixo X local, não no Z — não é um botão de compra abaixo).
     createZone("Descarte do Mercado", market.discard, function(zone, zoneLength, zoneWidth)
-        local buttonXOffset = (zoneWidth / 2) + (zoneWidth * BUTTON_GAP_MULT)
+        -- Offset fixo calculado para posição absoluta de mesa X=14.25
+        -- (zona de descarte fica em x=10.83, então local = 14.25 - 10.83 = 3.42)
+        local buttonXOffset = 3.42
         zone.createButton({
             click_function = "onClearMarketClick",
             function_owner = self,
@@ -226,43 +230,46 @@ end
 -- à zona (fixo), então mover a carta entre zonas não exige
 -- recriar nada — só mover o objeto mesmo.
 
-local function shiftCardToZone(fromIndex, toIndex)
-    local fromZone = zones[fromIndex]
-    local toZone   = zones[toIndex]
-    if fromZone == nil or toZone == nil then return end
-
-    local objs = fromZone.getObjects()
-    if objs == nil or #objs == 0 then return end
-    local card = objs[1]
-
-    local market = Global.call("getMarketPositions")
-    local toPos  = market.slots[toIndex]
-    card.setPositionSmooth({ toPos.x, toPos.y + 0.3, toPos.z }, false, true)
-end
-
 function onClearMarketClick()
     if marketLocked then return end
     marketLocked = true
 
     local market = Global.call("getMarketPositions")
 
-    -- 1. Descarta as posições 5 e 6 — SEM reposição automática aqui,
-    --    elas serão preenchidas pela esteira (passo 2)
-    for _, idx in ipairs({ 5, 6 }) do
-        local zone = zones[idx]
+    -- Captura TODAS as referências de carta das 6 zonas de uma vez,
+    -- ANTES de mover qualquer coisa. Reconsultar zone.getObjects()
+    -- a cada passo (como era antes) falhava: a carta descartada de
+    -- 5/6 ainda estava em pleno voo (setPositionSmooth) quando o
+    -- passo seguinte tentava ler a zona de novo, confundindo a
+    -- detecção e fazendo a esteira "sumir" — só o refill de 1 e 2
+    -- (que não depende dessa releitura) parecia funcionar.
+    local captured = {}
+    for i = 1, 6 do
+        local zone = zones[i]
         local objs = zone and zone.getObjects()
-        if objs ~= nil and #objs > 0 then
-            objs[1].setPositionSmooth(market.discard, false, true)
-        end
+        captured[i] = (objs ~= nil and #objs > 0) and objs[1] or nil
     end
 
-    -- 2. Avança a esteira da direita para a esquerda, para nunca
-    --    sobrescrever uma carta que ainda não se moveu:
-    --    4→6, 3→5, 2→4, 1→3
-    Wait.time(function() shiftCardToZone(4, 6) end, 0.6)
-    Wait.time(function() shiftCardToZone(3, 5) end, 1.1)
-    Wait.time(function() shiftCardToZone(2, 4) end, 1.6)
-    Wait.time(function() shiftCardToZone(1, 3) end, 2.1)
+    local function moveCapturedTo(card, toIndex)
+        if card == nil then return end
+        local pos = market.slots[toIndex]
+        card.setPositionSmooth({ pos.x, pos.y + 0.3, pos.z }, false, true)
+    end
+
+    -- 1. Descarta as cartas que JÁ ESTAVAM capturadas em 5 e 6 —
+    --    sem reposição automática aqui, elas serão preenchidas
+    --    pela esteira (passo 2)
+    if captured[5] ~= nil then captured[5].setPositionSmooth(market.discard, false, true) end
+    if captured[6] ~= nil then captured[6].setPositionSmooth(market.discard, false, true) end
+
+    -- 2. Avança a esteira usando as referências já capturadas —
+    --    4→6, 3→5, 2→4, 1→3. Não depende de reconsultar a zona,
+    --    então não corre risco de conflito com nenhuma animação
+    --    ainda em andamento.
+    Wait.time(function() moveCapturedTo(captured[4], 6) end, 0.7)
+    Wait.time(function() moveCapturedTo(captured[3], 5) end, 1.3)
+    Wait.time(function() moveCapturedTo(captured[2], 4) end, 1.9)
+    Wait.time(function() moveCapturedTo(captured[1], 3) end, 2.5)
 
     -- 3. Slots 1 e 2 ficaram vagos pela esteira — só eles recebem
     --    cartas novas do deck do mercado
@@ -270,5 +277,5 @@ function onClearMarketClick()
         refillSlotIfEmpty(1)
         refillSlotIfEmpty(2)
         marketLocked = false
-    end, 2.8)
+    end, 3.2)
 end
