@@ -55,6 +55,8 @@ como ✅ é uma regressão e deve ser corrigida antes do commit.
 | 3.7 | Diagnóstico pós-spawn bate com o pré-spawn | Contagem real na mesa (`getQuantity()` por posição) == diagnóstico calculado do manifest |
 | 3.8 | Todos os decks são embaralhados ao final | `shuffleAllDecks()` chama `.shuffle()` em cada posição de `positionByKey` — cobre tanto modo Automático quanto Manual (posições deslocadas) |
 | 3.9 | Mercado é preenchido automaticamente ao final | `fillMarketSlotsFromDeck()` vira as 6 cartas do topo do deck do mercado para as zonas de compra, face para cima, staggered para evitar colisão física |
+| 3.10 | Deck do mercado não fica torto após a distribuição | Rotação do deck restante é travada explicitamente (`setRotationSmooth`) depois da última extração — corrige o torque acumulado de puxar 6 cartas seguidas |
+| 3.11 | Painel fecha automaticamente ao final do setup | Mensagem muda para "Aproveite o jogo, boa sorte!", painel fecha sozinho 5s depois via `onCloseClick()` chamado diretamente |
 
 ---
 
