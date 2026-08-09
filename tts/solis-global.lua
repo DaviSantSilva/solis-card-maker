@@ -295,13 +295,32 @@ end
 local nextCustomDeckKey = 1
 local spawnQueue = {}
 local decksByPositionKey = {}
+local positionByKey = {} -- key -> posição real usada neste run (necessário pois o modo Manual desloca as corps)
 local BATCH_DELAY = 0.08 -- segundos entre cada spawn
 
 local function posKey(pos)
     return string.format("%.2f_%.2f_%.2f", pos.x, pos.y, pos.z)
 end
 
+-- Busca ampla reutilizável — mesma lógica usada em clearPileAt,
+-- no diagnóstico e agora também no embaralhamento/preenchimento do mercado.
+local function findPileWide(worldPos)
+    local hits = Physics.cast({
+        origin       = { worldPos.x, worldPos.y + 3, worldPos.z },
+        direction    = { 0, -1, 0 },
+        type         = 2,
+        size         = { 3, 6, 3 },
+        max_distance = 6,
+    })
+    for _, hit in ipairs(hits) do
+        local obj = hit.hit_object
+        if obj.type == "Deck" or obj.type == "Card" then return obj end
+    end
+    return nil
+end
+
 local function enqueueDeck(cardList, targetPos)
+    positionByKey[posKey(targetPos)] = targetPos
     for _, card in ipairs(cardList) do
         for i = 1, card.quantity do
             table.insert(spawnQueue, { faceUrl = card.faceUrl, name = card.name, position = targetPos })
@@ -416,6 +435,7 @@ end
 function spawnAllDecks(mainDeckCards, corpDeckCards)
     spawnQueue = {}
     decksByPositionKey = {}
+    positionByKey = {}
 
     clearAllTargetPositions()
 
@@ -498,6 +518,41 @@ function processSpawnQueue(index)
     Wait.time(function() processSpawnQueue(index + 1) end, BATCH_DELAY)
 end
 
+-- Vira as N cartas do topo do deck do mercado (uma por zona de
+-- compra) para as posições de slot, com a face para cima. Chamado
+-- uma única vez, ao final do setup, depois de embaralhar tudo.
+local function fillMarketSlotsFromDeck()
+    for i, slotPos in ipairs(POSITIONS.market.slots) do
+        Wait.time(function()
+            local deckPile = findPileWide(POSITIONS.market.deck)
+            if deckPile == nil then return end
+
+            if deckPile.type == "Deck" then
+                deckPile.takeObject({
+                    position = slotPos,
+                    rotation = { 0, 180, 0 }, -- face para cima (rotY=180, rotZ=0)
+                    smooth   = true,
+                })
+            else
+                deckPile.setPositionSmooth(slotPos, false, true)
+                deckPile.setRotationSmooth({ 0, 180, 0 }, false, true)
+            end
+        end, (i - 1) * 0.25)
+    end
+end
+
+-- Embaralha todo deck encontrado em cada posição realmente usada
+-- neste run (via positionByKey — cobre tanto o modo Automático
+-- quanto o Manual, cujas posições de corp são deslocadas).
+local function shuffleAllDecks()
+    for _, pos in pairs(positionByKey) do
+        local obj = findPileWide(pos)
+        if obj ~= nil and obj.type == "Deck" and obj.shuffle then
+            obj.shuffle()
+        end
+    end
+end
+
 -- Combina os objetos que caíram na mesma posição num único Deck.
 -- Se group() não se comportar como esperado na sua versão do TTS,
 -- a alternativa é encadear obj.putObject(proximoObj) manualmente.
@@ -509,29 +564,30 @@ function mergeAllPendingDecks()
     end
     decksByPositionKey = {}
 
-    -- DIAGNÓSTICO PÓS-SPAWN: conta o que REALMENTE existe em cada
-    -- posição depois de tudo pronto — compara contra o diagnóstico
-    -- pré-spawn para confirmar se a duplicação acontece antes ou
-    -- depois da geração das cartas.
+    -- 1. Embaralha todos os decks recém-formados
     Wait.time(function()
-        local function countAt(pos)
-            local hits = Physics.cast({
-                origin = { pos.x, pos.y + 3, pos.z }, direction = { 0, -1, 0 },
-                type = 2, size = { 3, 6, 3 }, max_distance = 6,
-            })
-            for _, hit in ipairs(hits) do
-                local obj = hit.hit_object
-                if obj.type == "Deck" then return obj.getQuantity() end
-                if obj.type == "Card" then return 1 end
-            end
-            return 0
-        end
+        shuffleAllDecks()
 
-        local report = "Na mesa — mercado: " .. countAt(POSITIONS.market.deck)
-        for _, corp in ipairs({ "tabajara", "zenite", "atomic", "atto", "core" }) do
-            report = report .. " | " .. corp .. ": " .. countAt(POSITIONS.corp[corp].deck)
-        end
-        print("[Solis] " .. report)
-        Global.UI.setValue("setupStatusText", report)
-    end, 1)
+        -- 2. Distribui o topo do mercado para as 6 zonas de compra
+        Wait.time(function()
+            fillMarketSlotsFromDeck()
+
+            -- 3. Diagnóstico pós-spawn (conta o que realmente existe)
+            Wait.time(function()
+                local function countAt(pos)
+                    local obj = findPileWide(pos)
+                    if obj == nil then return 0 end
+                    if obj.type == "Deck" then return obj.getQuantity() end
+                    return 1
+                end
+
+                local report = "Na mesa — mercado: " .. countAt(POSITIONS.market.deck)
+                for _, corp in ipairs({ "tabajara", "zenite", "atomic", "atto", "core" }) do
+                    report = report .. " | " .. corp .. ": " .. countAt(POSITIONS.corp[corp].deck)
+                end
+                print("[Solis] " .. report)
+                Global.UI.setValue("setupStatusText", report)
+            end, 2)
+        end, 1)
+    end, 0.6)
 end
