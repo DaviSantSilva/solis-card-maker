@@ -2,10 +2,14 @@
 -- Solis — Script Global (posições + menu de setup + import)
 -- Cole este conteúdo no Global Script da partida
 -- (Objects → Scripting → Global). É o ÚNICO script global —
--- ele já contém as posições E o menu, não precisa de mais nada
+-- ele já contém as posições E o menu, não precisa de nada mais
 -- além disto e dos scripts por objeto (player-deck-manager,
 -- market-manager).
 -- ============================================================
+
+function onLoad()
+    math.randomseed(os.time())
+end
 
 -- ── posições da mesa ─────────────────────────────────────────
 
@@ -336,6 +340,79 @@ local function clearAllTargetPositions()
     end
 end
 
+-- ── atribuição jogador ↔ corporação (modo automático) ────────
+--
+-- Prioridade, seguindo exatamente as diretrizes definidas:
+-- 1. Cores já sentadas → cada uma reivindica sua corp
+-- 2. Jogadores na sala SEM cor → forçados a sentar nas corps
+--    restantes, até completar o nº de jogadores selecionado
+-- 3. Ainda faltando (sem mais ninguém na sala) → sorteia entre
+--    as corps realmente não reivindicadas
+--
+-- Retorna uma lista com exatamente setupState.players corpIds.
+local function assignCorpsToPlayers()
+    local allCorps = { "tabajara", "zenite", "atomic", "atto", "core" }
+    local assigned = {}
+    local assignments = {}
+
+    local allPlayers = Player.getPlayers()
+
+    -- 1. Cores já sentadas
+    for _, player in ipairs(allPlayers) do
+        if player.seated then
+            local corp = COLOR_CORP[player.color]
+            if corp ~= nil and not assigned[corp] then
+                assigned[corp] = true
+                table.insert(assignments, corp)
+            end
+        end
+    end
+
+    -- 2. Jogadores sem cor na sala → força sentar nas corps restantes
+    if #assignments < setupState.players then
+        local unseated = {}
+        for _, player in ipairs(allPlayers) do
+            if not player.seated then table.insert(unseated, player) end
+        end
+
+        local remaining = {}
+        for _, corp in ipairs(allCorps) do
+            if not assigned[corp] then table.insert(remaining, corp) end
+        end
+
+        local ui = 1
+        for _, corp in ipairs(remaining) do
+            if #assignments >= setupState.players then break end
+            if unseated[ui] ~= nil then
+                unseated[ui].changeColor(CORP_COLOR[corp])
+                assigned[corp] = true
+                table.insert(assignments, corp)
+                ui = ui + 1
+            end
+        end
+    end
+
+    -- 3. Ainda falta? sorteia entre as corps realmente não reivindicadas
+    if #assignments < setupState.players then
+        local remaining = {}
+        for _, corp in ipairs(allCorps) do
+            if not assigned[corp] then table.insert(remaining, corp) end
+        end
+        -- embaralha (Fisher-Yates)
+        for i = #remaining, 2, -1 do
+            local j = math.random(i)
+            remaining[i], remaining[j] = remaining[j], remaining[i]
+        end
+        for _, corp in ipairs(remaining) do
+            if #assignments >= setupState.players then break end
+            assigned[corp] = true
+            table.insert(assignments, corp)
+        end
+    end
+
+    return assignments
+end
+
 function spawnAllDecks(mainDeckCards, corpDeckCards)
     spawnQueue = {}
     decksByPositionKey = {}
@@ -343,8 +420,22 @@ function spawnAllDecks(mainDeckCards, corpDeckCards)
     clearAllTargetPositions()
 
     enqueueDeck(mainDeckCards, POSITIONS.market.deck)
-    for corp, cards in pairs(corpDeckCards) do
-        enqueueDeck(cards, POSITIONS.corp[corp].deck)
+
+    if setupState.mode == "auto" then
+        -- Automático: só as corps atribuídas aos N jogadores selecionados,
+        -- direto na posição de mesa de cada uma (já é a área do jogador)
+        local corpsToSpawn = assignCorpsToPlayers()
+        for _, corp in ipairs(corpsToSpawn) do
+            enqueueDeck(corpDeckCards[corp], POSITIONS.corp[corp].deck)
+        end
+    else
+        -- Manual: todas as 5, deslocadas para fora da mesa principal,
+        -- para o host distribuir manualmente
+        for corp, cards in pairs(corpDeckCards) do
+            local base = POSITIONS.corp[corp].deck
+            local staging = { x = base.x, y = base.y, z = base.z - 25 }
+            enqueueDeck(cards, staging)
+        end
     end
 
     Global.UI.setValue("setupStatusText", "Gerando " .. #spawnQueue .. " cartas…")
