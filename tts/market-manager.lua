@@ -84,7 +84,7 @@ local function createMarketZone(slotIndex, slotPos)
             function_owner = self,
             label          = "Comprar",
             position       = { 0, 0, buttonZOffset },
-            rotation       = { 0, 0, 0 },
+            rotation       = { 0, 180, 0 }, -- mesma convenção legível usada nos outros scripts
             width          = 720,  -- 900 - 20%
             height         = 224,  -- 280 - 20%
             font_size      = 112,  -- 140 - 20%
