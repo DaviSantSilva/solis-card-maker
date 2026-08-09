@@ -20,7 +20,7 @@
 local CARD_WIDTH       = 2.2
 local CARD_LENGTH      = 3.15
 local ZONE_SCALE_MULT  = 1.05 -- zonas 5% maiores que a carta
-local BUTTON_GAP_MULT  = 0.05 -- botão 5% abaixo da borda da zona
+local BUTTON_GAP_MULT  = 0.015 -- botão bem próximo da borda da zona
 
 local zones         = {} -- slotIndex -> objeto LayoutZone
 local marketLocked  = false
@@ -63,7 +63,7 @@ local function createZone(name, pos, onReady)
                 trigger_for_face_up   = true,
                 instant_refill        = false,
             })
-            if onReady then onReady(zone, zoneLength) end
+            if onReady then onReady(zone, zoneLength, zoneWidth) end
         end,
     })
 end
@@ -85,9 +85,9 @@ local function createMarketZone(slotIndex, slotPos)
             label          = "Comprar",
             position       = { 0, 0, buttonZOffset },
             rotation       = { 0, 180, 0 }, -- mesma convenção legível usada nos outros scripts
-            width          = 720,  -- 900 - 20%
-            height         = 224,  -- 280 - 20%
-            font_size      = 112,  -- 140 - 20%
+            width          = 612,  -- 720 - 15%
+            height         = 190,  -- 224 - 15%
+            font_size      = 95,   -- 112 - 15%
             color          = { 0.15, 0.4, 0.2 },
             font_color     = { 1, 1, 1 },
         })
@@ -108,8 +108,23 @@ function onLoad()
 
     -- Zona do descarte — mesmo padrão das zonas de compra
     -- (5% maior que uma carta, alinhada lateralmente ao deck),
-    -- mas sem botão de compra.
-    createZone("Descarte do Mercado", market.discard)
+    -- com o botão 'Limpar mercado' à direita dela (deslocamento
+    -- no eixo X local, não no Z — não é um botão de compra abaixo).
+    createZone("Descarte do Mercado", market.discard, function(zone, zoneLength, zoneWidth)
+        local buttonXOffset = (zoneWidth / 2) + (zoneWidth * BUTTON_GAP_MULT)
+        zone.createButton({
+            click_function = "onClearMarketClick",
+            function_owner = self,
+            label          = "Limpar\nmercado",
+            position       = { buttonXOffset, 0, 0 },
+            rotation       = { 0, 180, 0 },
+            width          = 612,
+            height         = 350,
+            font_size      = 90,
+            color          = { 0.45, 0.12, 0.12 },
+            font_color     = { 1, 1, 1 },
+        })
+    end)
 
     -- preenche o mercado ao carregar (dá tempo dos decks serem posicionados)
     Wait.time(function() fillAllSlots() end, 2)
