@@ -1,0 +1,40 @@
+<!--
+  Solis — UI do Gerenciador de DECK
+
+  Como instalar:
+  No editor de Scripting do objeto (um dos 5 marcadores de deck,
+  posicionado à ESQUERDA do tabuleiro de cada jogador), existem
+  as abas "Script" e "UI".
+  Cole deck-manager.lua na aba SCRIPT.
+  Cole ESTE arquivo na aba UI.
+-->
+
+<Defaults>
+    <Text fontSize="90" scale="1 0.9 1" color="#eceef3"/>
+    <Button fontSize="70" margin="40" scale="1 0.9 1"
+            colors="#1a1d22|#252930|#3b82f6|#131518" textColor="#eceef3"/>
+    <VerticalLayout color="#0c0d0f" padding="50" spacing="60"/>
+</Defaults>
+
+<Panel position="0 0 -10.1" rotation="0 0 180" scale="0.24 0.262 0" height="550" width="700">
+    <VerticalLayout>
+
+        <Text id="txt_Deck" fontSize="110">Deck</Text>
+
+        <Button id="btn_shuffle" onClick="onShuffleClick" raycastTarget="false">
+            Reembaralhar
+        </Button>
+
+        <HorizontalLayout spacing="20" height="90">
+            <Button id="btn_drawLeft" onClick="onDrawLeftClick" minWidth="90">−</Button>
+            <Button id="btn_drawMid" onClick="onDrawMidClick" flexibleWidth="4"></Button>
+            <Button id="btn_drawRight" onClick="onDrawRightClick" minWidth="90">+</Button>
+        </HorizontalLayout>
+        <Text id="txt_drawMid" fontSize="60" alignment="MiddleCenter">Comprar até 5</Text>
+
+        <Button id="btn_discard" onClick="onDiscardDeckClick" raycastTarget="false" color="#252930">
+            Mover Deck
+        </Button>
+
+    </VerticalLayout>
+</Panel>

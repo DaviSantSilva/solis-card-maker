@@ -1,0 +1,37 @@
+<!--
+  Solis — UI do Gerenciador de DESCARTE
+
+  Como instalar:
+  No editor de Scripting do objeto (um dos 5 marcadores de
+  descarte, posicionado à DIREITA do tabuleiro de cada jogador),
+  existem as abas "Script" e "UI".
+  Cole discard-manager.lua na aba SCRIPT.
+  Cole ESTE arquivo na aba UI.
+-->
+
+<Defaults>
+    <Text fontSize="90" scale="1 0.9 1" color="#eceef3"/>
+    <Button fontSize="70" margin="40" scale="1 0.9 1"
+            colors="#1a1d22|#252930|#3b82f6|#131518" textColor="#eceef3"/>
+    <VerticalLayout color="#0c0d0f" padding="50" spacing="60"/>
+</Defaults>
+
+<Panel position="0 0 -10.1" rotation="0 0 180" scale="0.24 0.262 0" height="550" width="700">
+    <VerticalLayout>
+
+        <Text id="txt_Discard" fontSize="110">Descarte</Text>
+
+        <Button id="btn_discardHand" onClick="onDiscardHandClick" raycastTarget="false" color="#7f1d1d">
+            Descartar Mão
+        </Button>
+
+        <HorizontalLayout spacing="20" height="90">
+            <Button id="btn_discardRandomLeft" onClick="onDiscardRandomLeftClick" minWidth="90">−</Button>
+            <Button id="btn_discardRandomMid" onClick="onDiscardRandomMidClick" flexibleWidth="4"
+                    color="#7f1d1d"></Button>
+            <Button id="btn_discardRandomRight" onClick="onDiscardRandomRightClick" minWidth="90">+</Button>
+        </HorizontalLayout>
+        <Text id="txt_discardRandom" fontSize="60" alignment="MiddleCenter">Descartar 1 aleatória</Text>
+
+    </VerticalLayout>
+</Panel>

@@ -1,28 +1,25 @@
 -- ============================================================
--- Solis — Gerenciador de Deck do Jogador (por corporação)
+-- Solis — Gerenciador do DECK do Jogador (por corporação)
 --
--- Baseado na referência "Deck Re-Shuffler" (Nyss), adaptado com
--- a lógica específica do Solis: zona de mão física (não a mão
--- oculta do TTS), posições vindas do Global, corpId por objeto.
+-- Um dos dois objetos que compõem o gerenciamento de deck do
+-- jogador — este cuida do lado do DECK (compra/reembaralhar).
+-- O par complementar é discard-manager.lua, que cuida do
+-- descarte (descartar mão / N aleatórias).
 --
 -- Como instalar:
 -- 1. Cole solis-global.lua no Global Script da partida ANTES deste.
--- 2. Crie um objeto discreto (marcador/tile fino) perto da zona
---    de descarte de cada corporação (5 no total).
+-- 2. Crie um objeto discreto à ESQUERDA do tabuleiro de cada
+--    jogador (perto da posição do deck da corp) — 5 no total.
 -- 3. Cole este script na aba SCRIPT e o conteúdo de
---    player-deck-manager-ui.xml na aba UI de cada um dos 5 objetos.
+--    deck-manager-ui.xml na aba UI de cada um dos 5 objetos.
 -- 4. Em cada objeto, defina a Description (botão direito → Notes)
 --    com o id da corporação: tabajara, zenite, atomic, atto ou core.
---
--- Este único par script+UI serve para as 5 corporações — só muda
--- a Description de cada objeto.
 -- ============================================================
 
 local corpId = self.getDescription()
 
 local settings = {
-    drawCount     = 5, -- valor do botão "Comprar até X"
-    discardRandom = 1, -- valor do botão "Descartar N aleatórias"
+    drawCount = 5, -- valor do botão "Comprar até X"
 }
 
 -- ── ciclo de vida ──────────────────────────────────────────
@@ -69,14 +66,13 @@ end
 local function findDrawPile()    return findPileAt(positions().deck) end
 local function findDiscardPile() return findPileAt(positions().discard) end
 
--- ── UI (self.UI — painel próprio do objeto, ver player-deck-manager-ui.xml) ──
+-- ── UI ────────────────────────────────────────────────────
 
 function updateUI()
     self.UI.setValue("txt_drawMid", "Comprar até " .. settings.drawCount)
-    self.UI.setValue("txt_discardRandom", "Descartar " .. settings.discardRandom .. " aleatória(s)")
 end
 
--- ── reembaralhar (utilitário) ────────────────────────────────
+-- ── reembaralhar ──────────────────────────────────────────
 
 function onShuffleClick(player)
     reshuffleDiscardIntoDraw(player and player.color)
@@ -132,7 +128,7 @@ end
 -- corporação, com leve deslocamento entre cada uma. Reembaralha
 -- o descarte automaticamente se o deck acabar no meio da compra.
 function drawToHandZone(count, playerColor)
-    local pos     = positions()
+    local pos      = positions()
     local handBase = pos.hand
 
     local function drawOne(i)
@@ -167,43 +163,5 @@ function drawToHandZone(count, playerColor)
 
     for i = 1, count do
         Wait.time(function() drawOne(i) end, (i - 1) * 0.18)
-    end
-end
-
--- ── descartar mão inteira ────────────────────────────────────
-
-function onDiscardHandClick(player)
-    if player == nil then return end
-    local pos = positions()
-    for _, card in ipairs(player.getHandObjects()) do
-        card.setPosition(pos.discard)
-    end
-end
-
--- ── descartar N cartas aleatórias da mão (ajustável) ─────────
-
-function onDiscardRandomLeftClick()
-    settings.discardRandom = math.max(0, settings.discardRandom - 1)
-    updateUI()
-end
-
-function onDiscardRandomRightClick()
-    settings.discardRandom = settings.discardRandom + 1
-    updateUI()
-end
-
-function onDiscardRandomMidClick(player)
-    if player == nil then return end
-    local pos  = positions()
-    local hand = player.getHandObjects()
-    local count = math.min(settings.discardRandom, #hand)
-
-    for i = 1, count do
-        Wait.time(function()
-            local currentHand = player.getHandObjects()
-            if #currentHand == 0 then return end
-            local rand = math.random(#currentHand)
-            currentHand[rand].setPosition(pos.discard)
-        end, (i - 1) * 0.3)
     end
 end
