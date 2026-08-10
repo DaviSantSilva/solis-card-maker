@@ -147,9 +147,9 @@ function onLoad()
         label          = "Limpar\nmercado",
         position       = { 0, 0, 0 }, -- âncora já está exatamente no lugar certo
         rotation       = { 0, 180, 0 },
-        width          = 612,
-        height         = 350,
-        font_size      = 90,
+        width          = 2448, -- 612 × 4
+        height         = 1400, -- 350 × 4
+        font_size      = 360,  -- 90 × 4
         color          = { 0.45, 0.12, 0.12 },
         font_color     = { 1, 1, 1 },
     })
