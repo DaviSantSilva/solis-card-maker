@@ -76,12 +76,15 @@ como ✅ é uma regressão e deve ser corrigida antes do commit.
 
 ---
 
-## 5. Player Deck Manager (`player-deck-manager.lua` + `player-deck-manager-ui.xml`, um par por corp) — arquitetura v2, painel próprio do objeto
+## 5. Gerenciador de Deck/Descarte do Jogador — arquitetura v3, dois objetos por corp
 
-> Reescrito seguindo a referência "Deck Re-Shuffler" (Nyss): painel de UI
-> próprio do objeto (`self.UI`), não mais botões flutuantes soltos
-> (`createButton`). Layout frente com Deck/Descarte e dois controles
-> ajustáveis no padrão `[-] [ação] [+]`.
+> Dividido em DOIS objetos independentes por corp (10 no total): um para
+> o deck (posicionado à ESQUERDA do tabuleiro do jogador) e outro para
+> o descarte (à DIREITA). Cada um tem seu próprio script+UI, mas ambos
+> seguem o mesmo padrão de identificação por `Description` e acesso a
+> posições via `Global.call`.
+
+### 5A. Deck Manager (`deck-manager.lua` + `deck-manager-ui.xml`)
 
 | # | Comportamento | Critério de aprovação |
 |---|---|---|
@@ -90,10 +93,16 @@ como ✅ é uma regressão e deve ser corrigida antes do commit.
 | 5.3 | Compra vai para a zona de mão física, não a mão oculta do TTS | `takeObject` com posição = coordenada de mesa (`positions().hand`), não `deck.deal()` |
 | 5.4 | Auto-reshuffle quando o deck acaba no meio da compra | Descarte é movido para a posição do deck e embaralhado automaticamente, sem interromper a operação de compra |
 | 5.5 | Botão "Reembaralhar" funciona | Move todo o descarte para a posição do deck e embaralha (`reshuffleDiscardIntoDraw`) |
-| 5.6 | Botão "Mover Deck" funciona | Move o deck inteiro para a posição de descarte — utilitário manual da referência original |
-| 5.7 | Botão "Descartar Mão" funciona | Move todas as cartas de `player.getHandObjects()` para o descarte |
-| 5.8 | Botão ajustável [-] [Descartar N aleatórias] [+] funciona | Mesmo padrão do botão de compra — descarta N cartas aleatórias da mão, staggered com `Wait.time` entre cada uma |
-| 5.9 | Callbacks do painel recebem o objeto Player | `onDrawMidClick(player)` etc. usam `player.color`/`player.getHandObjects()` — não uma string de cor (mesma convenção de XmlUI do resto do projeto) |
+| 5.6 | Botão "Mover Deck" funciona | Move o deck inteiro para a posição de descarte — utilitário manual |
+
+### 5B. Discard Manager (`discard-manager.lua` + `discard-manager-ui.xml`)
+
+| # | Comportamento | Critério de aprovação |
+|---|---|---|
+| 5.7 | Um único par script+UI serve as 5 corps | Mesmo padrão de `corpId` via Description |
+| 5.8 | Botão "Descartar Mão" funciona | Move todas as cartas de `player.getHandObjects()` para o descarte |
+| 5.9 | Botão ajustável [-] [Descartar N aleatórias] [+] funciona | Mesmo padrão do botão de compra — descarta N cartas aleatórias da mão, staggered com `Wait.time` entre cada uma |
+| 5.10 | Callbacks dos painéis recebem o objeto Player | `onDrawMidClick(player)`, `onDiscardHandClick(player)` etc. usam `player.color`/`player.getHandObjects()` — não uma string de cor (mesma convenção de XmlUI do resto do projeto) |
 
 ---
 
