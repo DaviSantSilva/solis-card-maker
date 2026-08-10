@@ -1,27 +1,29 @@
 -- ============================================================
 -- Solis — Gerenciador de Deck do Jogador (por corporação)
 --
+-- Baseado na referência "Deck Re-Shuffler" (Nyss), adaptado com
+-- a lógica específica do Solis: zona de mão física (não a mão
+-- oculta do TTS), posições vindas do Global, corpId por objeto.
+--
 -- Como instalar:
 -- 1. Cole solis-global.lua no Global Script da partida ANTES deste.
 -- 2. Crie um objeto discreto (marcador/tile fino) perto da zona
 --    de descarte de cada corporação (5 no total).
--- 3. Cole este script em cada um desses 5 objetos.
--- 4. No campo "Description" do objeto (botão direito → Notes),
---    escreva exatamente o id da corporação: tabajara, zenite,
---    atomic, atto ou core. O script lê esse campo para saber
---    a quais posições da tabela Global ele se refere.
+-- 3. Cole este script na aba SCRIPT e o conteúdo de
+--    player-deck-manager-ui.xml na aba UI de cada um dos 5 objetos.
+-- 4. Em cada objeto, defina a Description (botão direito → Notes)
+--    com o id da corporação: tabajara, zenite, atomic, atto ou core.
 --
--- Este único script serve para as 5 corporações — só muda a
--- Description de cada objeto.
+-- Este único par script+UI serve para as 5 corporações — só muda
+-- a Description de cada objeto.
 -- ============================================================
 
 local corpId = self.getDescription()
 
 local settings = {
-    drawCount = 5, -- valor do botão de compra ajustável
+    drawCount     = 5, -- valor do botão "Comprar até X"
+    discardRandom = 1, -- valor do botão "Descartar N aleatórias"
 }
-
-local DEBUG = false
 
 -- ── ciclo de vida ──────────────────────────────────────────
 
@@ -36,7 +38,7 @@ function onLoad(savedData)
         return
     end
 
-    createButtons()
+    Wait.frames(function() updateUI() end, 10)
 end
 
 function onSave()
@@ -49,22 +51,17 @@ local function positions()
     return Global.call("getCorpPositions", corpId)
 end
 
--- Retorna o Deck/Card encontrado numa posição ABSOLUTA da mesa.
 local function findPileAt(worldPos)
     local hits = Physics.cast({
         origin       = worldPos,
         direction    = { 0, -1, 0 },
-        type         = 2, -- box cast
+        type         = 2,
         size         = { 1, 1, 1 },
         max_distance = 1,
-        debug        = DEBUG,
     })
-
     for _, hit in ipairs(hits) do
         local obj = hit.hit_object
-        if obj.type == "Deck" or obj.type == "Card" then
-            return obj
-        end
+        if obj.type == "Deck" or obj.type == "Card" then return obj end
     end
     return nil
 end
@@ -72,114 +69,76 @@ end
 local function findDrawPile()    return findPileAt(positions().deck) end
 local function findDiscardPile() return findPileAt(positions().discard) end
 
--- ── botões ────────────────────────────────────────────────
+-- ── UI (self.UI — painel próprio do objeto, ver player-deck-manager-ui.xml) ──
 
-function createButtons()
-    -- botão fixo: comprar até 5
-    self.createButton({
-        click_function = "onDrawFixedClick",
-        function_owner = self,
-        label          = "Comprar até 5",
-        position       = { 0, 0.3, 0.9 },
-        rotation       = { 0, 180, 0 },
-        width          = 1100,
-        height         = 300,
-        font_size      = 150,
-        color          = { 0.15, 0.15, 0.18 },
-        font_color     = { 1, 1, 1 },
-    })
-
-    -- botões de quantidade ajustável: [-] [Comprar até X] [+]
-    self.createButton({
-        click_function = "onDrawMinusClick",
-        function_owner = self,
-        label          = "-",
-        position       = { -1.0, 0.3, 1.35 },
-        rotation       = { 0, 180, 0 },
-        width          = 300,
-        height         = 300,
-        font_size      = 180,
-        color          = { 0.2, 0.2, 0.24 },
-        font_color     = { 1, 1, 1 },
-    })
-
-    self.createButton({
-        click_function = "onDrawAdjustableClick",
-        function_owner = self,
-        label          = "Comprar até " .. settings.drawCount,
-        position       = { 0, 0.3, 1.35 },
-        rotation       = { 0, 180, 0 },
-        width          = 1100,
-        height         = 300,
-        font_size      = 140,
-        color          = { 0.15, 0.15, 0.18 },
-        font_color     = { 1, 1, 1 },
-    })
-
-    self.createButton({
-        click_function = "onDrawPlusClick",
-        function_owner = self,
-        label          = "+",
-        position       = { 1.0, 0.3, 1.35 },
-        rotation       = { 0, 180, 0 },
-        width          = 300,
-        height         = 300,
-        font_size      = 180,
-        color          = { 0.2, 0.2, 0.24 },
-        font_color     = { 1, 1, 1 },
-    })
-
-    -- botão na zona de descarte: reconstruir deck
-    self.createButton({
-        click_function = "onRebuildClick",
-        function_owner = self,
-        label          = "Reconstruir deck",
-        position       = { 0, 0.3, 1.8 },
-        rotation       = { 0, 180, 0 },
-        width          = 1100,
-        height         = 300,
-        font_size      = 130,
-        color          = { 0.15, 0.32, 0.5 },
-        font_color     = { 1, 1, 1 },
-    })
+function updateUI()
+    self.UI.setValue("txt_drawMid", "Comprar até " .. settings.drawCount)
+    self.UI.setValue("txt_discardRandom", "Descartar " .. settings.discardRandom .. " aleatória(s)")
 end
 
-local function refreshAdjustableLabel()
-    self.editButton({ index = 2, label = "Comprar até " .. settings.drawCount })
+-- ── reembaralhar (utilitário) ────────────────────────────────
+
+function onShuffleClick(player)
+    reshuffleDiscardIntoDraw(player and player.color)
 end
 
-function onDrawMinusClick()
-    settings.drawCount = math.max(1, settings.drawCount - 1)
-    refreshAdjustableLabel()
-end
-
-function onDrawPlusClick()
-    settings.drawCount = settings.drawCount + 1
-    refreshAdjustableLabel()
-end
-
--- ── compra — cartas vão para a ZONA DE MÃO física, não a mão oculta do TTS ──
-
-function onDrawFixedClick(_, playerColor)
-    drawToHandZone(5, playerColor)
-end
-
-function onDrawAdjustableClick(_, playerColor)
-    drawToHandZone(settings.drawCount, playerColor)
-end
-
--- Move até `count` cartas do topo do deck para a zona de mão da corporação,
--- com leve deslocamento entre cada uma para não empilhar perfeitamente.
--- Reembaralha o descarte automaticamente se o deck acabar no meio da compra.
-function drawToHandZone(count, playerColor)
+function reshuffleDiscardIntoDraw(playerColor)
     local pos = positions()
+    local discard = findDiscardPile()
+    if discard == nil then
+        if playerColor then
+            broadcastToColor("Nada no descarte para reembaralhar.", playerColor, { 1, 0.6, 0.2 })
+        end
+        return
+    end
+
+    discard.setPositionSmooth(pos.deck, false, true)
+    discard.setRotationSmooth({ 0, discard.getRotation().y, 0 }, false, true)
+
+    Wait.time(function()
+        local pile = findDrawPile()
+        if pile ~= nil and pile.shuffle then pile.shuffle() end
+    end, 0.6)
+end
+
+-- ── mover deck para o descarte (utilitário manual) ──────────
+
+function onDiscardDeckClick()
+    local pos  = positions()
+    local deck = findDrawPile()
+    if deck == nil then return end
+
+    deck.setPositionSmooth(pos.discard, false, true)
+    deck.setRotationSmooth({ 0, deck.getRotation().y, 0 }, false, true)
+end
+
+-- ── comprar (ajustável) — vai para a zona de mão física ─────
+
+function onDrawLeftClick()
+    settings.drawCount = math.max(1, settings.drawCount - 1)
+    updateUI()
+end
+
+function onDrawRightClick()
+    settings.drawCount = settings.drawCount + 1
+    updateUI()
+end
+
+function onDrawMidClick(player)
+    drawToHandZone(settings.drawCount, player and player.color)
+end
+
+-- Move até `count` cartas do topo do deck para a zona de mão da
+-- corporação, com leve deslocamento entre cada uma. Reembaralha
+-- o descarte automaticamente se o deck acabar no meio da compra.
+function drawToHandZone(count, playerColor)
+    local pos     = positions()
     local handBase = pos.hand
 
     local function drawOne(i)
         local pile = findDrawPile()
 
         if pile == nil then
-            -- deck vazio: tenta reembaralhar o descarte e continuar
             local discard = findDiscardPile()
             if discard == nil then
                 if playerColor then
@@ -211,24 +170,40 @@ function drawToHandZone(count, playerColor)
     end
 end
 
--- ── reconstruir deck a partir do descarte ──────────────────
+-- ── descartar mão inteira ────────────────────────────────────
 
-function onRebuildClick(_, playerColor)
+function onDiscardHandClick(player)
+    if player == nil then return end
     local pos = positions()
-    local discard = findDiscardPile()
-
-    if discard == nil then
-        if playerColor then
-            broadcastToColor("Nada no descarte para reconstruir.", playerColor, { 1, 0.6, 0.2 })
-        end
-        return
+    for _, card in ipairs(player.getHandObjects()) do
+        card.setPosition(pos.discard)
     end
+end
 
-    discard.setPositionSmooth(pos.deck, false, true)
-    discard.setRotationSmooth({ 0, discard.getRotation().y, 0 }, false, true)
+-- ── descartar N cartas aleatórias da mão (ajustável) ─────────
 
-    Wait.time(function()
-        local pile = findDrawPile()
-        if pile ~= nil and pile.shuffle then pile.shuffle() end
-    end, 0.6)
+function onDiscardRandomLeftClick()
+    settings.discardRandom = math.max(0, settings.discardRandom - 1)
+    updateUI()
+end
+
+function onDiscardRandomRightClick()
+    settings.discardRandom = settings.discardRandom + 1
+    updateUI()
+end
+
+function onDiscardRandomMidClick(player)
+    if player == nil then return end
+    local pos  = positions()
+    local hand = player.getHandObjects()
+    local count = math.min(settings.discardRandom, #hand)
+
+    for i = 1, count do
+        Wait.time(function()
+            local currentHand = player.getHandObjects()
+            if #currentHand == 0 then return end
+            local rand = math.random(#currentHand)
+            currentHand[rand].setPosition(pos.discard)
+        end, (i - 1) * 0.3)
+    end
 end

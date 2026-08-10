@@ -1,0 +1,92 @@
+<!--
+  Solis — UI do Gerenciador de Deck do Jogador
+
+  Como instalar:
+  No editor de Scripting do objeto (não o Global — este é por
+  objeto, um dos 5 marcadores de corporação), existem as abas
+  "Script" e "UI".
+  Cole player-deck-manager.lua na aba SCRIPT.
+  Cole ESTE arquivo na aba UI.
+
+  Baseado na referência "Deck Re-Shuffler" (Nyss) — painel frente
+  (Deck/Descarte + controles ajustáveis) e verso reservado para
+  configurações futuras, se necessário.
+-->
+
+<Defaults>
+    <Text fontSize="100" scale="1 0.9 1" color="#eceef3"/>
+    <Button fontSize="40" margin="50" scale="1 0.9 1"
+            colors="#1a1d22|#252930|#3b82f6|#131518" textColor="#eceef3"/>
+    <VerticalLayout color="#0c0d0f" padding="60" spacing="120"/>
+</Defaults>
+
+<!-- Frente -->
+<Panel position="0 0 -10.1" rotation="0 0 180" scale="0.24 0.262 0" height="550" width="1050">
+
+    <!-- Deck / Descarte -->
+    <HorizontalLayout spacing="120">
+
+        <Panel color="#1a1d22">
+            <Panel scale="0.95 0.97 1">
+                <VerticalLayout>
+                    <Text id="txt_Deck">Deck</Text>
+                    <Button id="btn_shuffle" onClick="onShuffleClick" raycastTarget="false">
+                        Reembaralhar
+                    </Button>
+                </VerticalLayout>
+            </Panel>
+        </Panel>
+
+        <Panel color="#1a1d22">
+            <Panel scale="0.95 0.97 1">
+                <VerticalLayout>
+                    <Text id="txt_Discard">Descarte</Text>
+                    <Button id="btn_discard" onClick="onDiscardDeckClick" raycastTarget="false">
+                        Mover Deck
+                    </Button>
+                </VerticalLayout>
+            </Panel>
+        </Panel>
+
+    </HorizontalLayout>
+
+    <!-- Abaixo: Comprar (ajustável) + Descartar mão -->
+    <HorizontalLayout id="panelBelow" ignoreLayout="true" height="60" width="950"
+                       offsetXY="-3 -330" spacing="250" scale="1 1 1">
+
+        <HorizontalLayout flexibleWidth="1">
+            <Button id="btn_drawLeft" onClick="onDrawLeftClick">−</Button>
+            <Button id="btn_drawMid" onClick="onDrawMidClick" flexibleWidth="4"></Button>
+            <Button id="btn_drawRight" onClick="onDrawRightClick">+</Button>
+            <Text id="txt_drawMid" ignoreLayout="true" fontSize="40" color="#eceef3">
+                Comprar até 5
+            </Text>
+        </HorizontalLayout>
+
+        <HorizontalLayout flexibleWidth="1">
+            <Button id="btn_discardHand" onClick="onDiscardHandClick" color="#7f1d1d">
+                Descartar Mão
+            </Button>
+        </HorizontalLayout>
+
+    </HorizontalLayout>
+
+    <!-- Acima: Descartar N aleatórias (ajustável) -->
+    <HorizontalLayout id="panelAbove" ignoreLayout="true" height="60" width="1060"
+                       offsetXY="-3 330" spacing="150" scale="1 1 1">
+
+        <HorizontalLayout flexibleWidth="1"></HorizontalLayout>
+
+        <HorizontalLayout flexibleWidth="1">
+            <Button id="btn_discardRandomLeft" onClick="onDiscardRandomLeftClick">−</Button>
+            <Button id="btn_discardRandomMid" onClick="onDiscardRandomMidClick" flexibleWidth="7"
+                    color="#7f1d1d"></Button>
+            <Button id="btn_discardRandomRight" onClick="onDiscardRandomRightClick">+</Button>
+            <Text id="txt_discardRandom" ignoreLayout="true" fontSize="40" color="#eceef3">
+                Descartar 1 aleatória
+            </Text>
+        </HorizontalLayout>
+
+    </HorizontalLayout>
+
+</Panel>
