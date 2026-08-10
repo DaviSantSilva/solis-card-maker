@@ -38,6 +38,24 @@ local marketLocked  = false
 -- Chamar zone.LayoutZone.setOptions() direto (sem esperar o
 -- callback) pode falhar silenciosamente e travar o resto do
 -- onLoad, impedindo qualquer zona/botão seguinte de ser criado.
+-- Cria um pequeno objeto "âncora" numa posição de mundo EXATA,
+-- com escala 1:1 — evita toda a matemática de correção de escala
+-- que se mostrou frágil ao posicionar em múltiplos eixos numa
+-- LayoutZone com escala não-uniforme (funcionava bem só com um
+-- eixo, como nos botões de compra, mas acumulava erro com X+Y+Z
+-- juntos). Com escala 1:1, um offset local de {0,0,0} corresponde
+-- exatamente à posição de mundo da âncora — sem cálculo, sem risco.
+local function createButtonAnchor(worldPos, buttonParams)
+    spawnObject({
+        type     = "LayoutZone",
+        position = worldPos,
+        scale    = { 1, 1, 1 },
+        callback_function = function(anchor)
+            anchor.createButton(buttonParams)
+        end,
+    })
+end
+
 local function createZone(name, pos, onReady)
     local zoneWidth  = CARD_WIDTH  * ZONE_SCALE_MULT
     local zoneLength = CARD_LENGTH * ZONE_SCALE_MULT
@@ -115,37 +133,26 @@ function onLoad()
     end
 
     -- Zona do descarte — mesmo padrão das zonas de compra
-    -- (5% maior que uma carta, alinhada lateralmente ao deck),
-    -- com o botão 'Limpar mercado' à direita dela (deslocamento
-    -- no eixo X local, não no Z — não é um botão de compra abaixo).
-    createZone("Descarte do Mercado", market.discard, function(zone, zoneLength, zoneWidth)
-        -- Mesma correção de escala explicada em createMarketZone.
-        -- Zona de descarte fica em mundo {10.83, 1.99, -13.24}
-        -- (y = 1.69 + 0.3, ver createZone). Posição absoluta
-        -- desejada: {14.28, 2.18, -13.32}.
-        --
-        -- offset mundo = desejado - zona = {3.45, 0.19, -0.08}
-        -- escala da zona = {zoneWidth≈2.31, 0.5, zoneLength≈3.31}
-        -- local = offset mundo / escala:
-        --   x = 3.45 / 2.31  ≈ 1.494
-        --   y = 0.19 / 0.5   = 0.380
-        --   z = -0.08 / 3.31 ≈ -0.024
-        local buttonXOffset = 1.494
-        local buttonYOffset = 0.380
-        local buttonZOffset = -0.024
-        zone.createButton({
-            click_function = "onClearMarketClick",
-            function_owner = self,
-            label          = "Limpar\nmercado",
-            position       = { buttonXOffset, buttonYOffset, buttonZOffset },
-            rotation       = { 0, 180, 0 },
-            width          = 612,
-            height         = 350,
-            font_size      = 90,
-            color          = { 0.45, 0.12, 0.12 },
-            font_color     = { 1, 1, 1 },
-        })
-    end)
+    -- (5% maior que uma carta, alinhada lateralmente ao deck).
+    -- Sem botão anexado a ela — o botão de limpar mercado usa uma
+    -- âncora própria (ver abaixo), não depende da escala da zona.
+    createZone("Descarte do Mercado", market.discard)
+
+    -- Botão "Limpar mercado" — âncora dedicada em posição de mundo
+    -- exata, imune à amplificação de escala que causava imprecisão
+    -- ao tentar deslocar em X+Y+Z a partir da zona de descarte.
+    createButtonAnchor({ 14.28, 2.18, -13.32 }, {
+        click_function = "onClearMarketClick",
+        function_owner = self,
+        label          = "Limpar\nmercado",
+        position       = { 0, 0, 0 }, -- âncora já está exatamente no lugar certo
+        rotation       = { 0, 180, 0 },
+        width          = 612,
+        height         = 350,
+        font_size      = 90,
+        color          = { 0.45, 0.12, 0.12 },
+        font_color     = { 1, 1, 1 },
+    })
 
     -- preenche o mercado ao carregar (dá tempo dos decks serem posicionados)
     Wait.time(function() fillAllSlots() end, 2)
