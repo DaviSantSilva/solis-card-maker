@@ -147,9 +147,9 @@ function onLoad()
         label          = "Limpar\nmercado",
         position       = { 0, 0, 0 }, -- âncora já está exatamente no lugar certo
         rotation       = { 0, 180, 0 },
-        width          = 2448, -- 612 × 4
-        height         = 1400, -- 350 × 4
-        font_size      = 360,  -- 90 × 4
+        width          = 2081, -- 2448 - 15%
+        height         = 1190, -- 1400 - 15%
+        font_size      = 306,  -- 360 - 15%
         color          = { 0.45, 0.12, 0.12 },
         font_color     = { 1, 1, 1 },
     })
@@ -302,10 +302,16 @@ function onClearMarketClick()
     Wait.time(function() moveCapturedTo(captured[1], 3) end, 2.5)
 
     -- 3. Slots 1 e 2 ficaram vagos pela esteira — só eles recebem
-    --    cartas novas do deck do mercado
+    --    cartas novas do deck do mercado. Escalonado com um pequeno
+    --    delay entre as duas chamadas — puxar 2 cartas do mesmo
+    --    deck no mesmo frame causa uma corrida onde só a segunda
+    --    extração realmente "conta" (mesmo padrão já usado em
+    --    drawToHandZone e fillMarketSlotsFromDeck para evitar isso).
     Wait.time(function()
         refillSlotIfEmpty(1)
-        refillSlotIfEmpty(2)
-        marketLocked = false
+        Wait.time(function()
+            refillSlotIfEmpty(2)
+            marketLocked = false
+        end, 0.3)
     end, 3.2)
 end
