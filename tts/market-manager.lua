@@ -29,8 +29,6 @@ local marketLocked  = false
 
 -- Cria uma LayoutZone genérica (5% maior que uma carta), usada
 -- tanto pelas zonas de compra quanto pela zona de descarte.
--- Cria uma LayoutZone genérica (5% maior que uma carta), usada
--- tanto pelas zonas de compra quanto pela zona de descarte.
 --
 -- Usa callback_function do próprio spawnObject — a API específica
 -- .LayoutZone só fica disponível depois que o objeto termina de
@@ -66,12 +64,14 @@ local function createZone(name, pos, onReady)
         -- refillSlotIfEmpty) — zona e botão ficam rente ao nível
         -- real das cartas na mesa, não flutuando nem embaixo dela.
         position = { pos.x, pos.y + 0.3, pos.z },
-        -- Y de escala reduzido de 2 para 0.5 — volume vertical
-        -- menor o suficiente para detectar cartas, mas evita que
-        -- deslocamentos locais no botão sejam amplificados pela
-        -- escala do objeto (era a causa do botão parar embaixo
-        -- da mesa com um offset negativo maior).
-        scale    = { zoneWidth, 0.5, zoneLength },
+        -- Y de escala: 0.5 era fino demais e podia deixar a carta
+        -- fora da faixa de detecção se ela assentasse um pouco
+        -- abaixo do ponto exato de spawn após a física estabilizar
+        -- (zone.getObjects() não a encontrava). Aumentado para 1.5 —
+        -- seguro agora porque os botões de compra usam Y local = 0,
+        -- então não sofrem mais a amplificação que motivou reduzir
+        -- para 0.5 antes (aquele problema era com offset Y != 0).
+        scale    = { zoneWidth, 1.5, zoneLength },
         callback_function = function(zone)
             zone.setName(name)
             zone.LayoutZone.setOptions({
@@ -235,10 +235,16 @@ function handleBuy(slotIndex, playerColor)
     end
 
     local zone = zones[slotIndex]
-    if zone == nil then return end
+    if zone == nil then
+        broadcastToColor("Zona " .. slotIndex .. " não inicializada — recarregue o mod.", playerColor, { 1, 0.4, 0.4 })
+        return
+    end
 
     local objs = zone.getObjects()
-    if objs == nil or #objs == 0 then return end
+    if objs == nil or #objs == 0 then
+        broadcastToColor("Nenhuma carta detectada na zona " .. slotIndex .. ".", playerColor, { 1, 0.6, 0.2 })
+        return
+    end
     local card = objs[1]
 
     local corpPositions = Global.call("getCorpPositions", corp)
