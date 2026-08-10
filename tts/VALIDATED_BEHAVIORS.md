@@ -76,16 +76,24 @@ como ✅ é uma regressão e deve ser corrigida antes do commit.
 
 ---
 
-## 5. Player Deck Manager (`player-deck-manager.lua`, um script por corp)
+## 5. Player Deck Manager (`player-deck-manager.lua` + `player-deck-manager-ui.xml`, um par por corp) — arquitetura v2, painel próprio do objeto
+
+> Reescrito seguindo a referência "Deck Re-Shuffler" (Nyss): painel de UI
+> próprio do objeto (`self.UI`), não mais botões flutuantes soltos
+> (`createButton`). Layout frente com Deck/Descarte e dois controles
+> ajustáveis no padrão `[-] [ação] [+]`.
 
 | # | Comportamento | Critério de aprovação |
 |---|---|---|
-| 5.1 | Um único script serve as 5 corps | `corpId = self.getDescription()` — objeto identifica a corp pela Description |
-| 5.2 | Botão "Comprar até 5" funciona | Puxa cartas até a zona de mão ter 5, usando `positions().hand` |
-| 5.3 | Botão ajustável [-] [Comprar até X] [+] funciona | X persiste entre saves via `onSave`/`onLoad`, mínimo 1 |
-| 5.4 | Compra vai para a zona de mão física, não a mão oculta do TTS | `takeObject` com posição = coordenada de mesa (`hand`), não `deck.deal()` |
-| 5.5 | Auto-reshuffle quando o deck acaba no meio da compra | Descarte é movido para a posição do deck e embaralhado automaticamente, sem interromper a operação de compra |
-| 5.6 | Botão "Reconstruir deck" funciona | Move todo o descarte para a posição do deck e embaralha |
+| 5.1 | Um único par script+UI serve as 5 corps | `corpId = self.getDescription()` — objeto identifica a corp pela Description |
+| 5.2 | Botão ajustável [-] [Comprar até X] [+] funciona | X persiste entre saves via `onSave`/`onLoad`, mínimo 1. `updateUI()` atualiza `txt_drawMid` via `self.UI.setValue` |
+| 5.3 | Compra vai para a zona de mão física, não a mão oculta do TTS | `takeObject` com posição = coordenada de mesa (`positions().hand`), não `deck.deal()` |
+| 5.4 | Auto-reshuffle quando o deck acaba no meio da compra | Descarte é movido para a posição do deck e embaralhado automaticamente, sem interromper a operação de compra |
+| 5.5 | Botão "Reembaralhar" funciona | Move todo o descarte para a posição do deck e embaralha (`reshuffleDiscardIntoDraw`) |
+| 5.6 | Botão "Mover Deck" funciona | Move o deck inteiro para a posição de descarte — utilitário manual da referência original |
+| 5.7 | Botão "Descartar Mão" funciona | Move todas as cartas de `player.getHandObjects()` para o descarte |
+| 5.8 | Botão ajustável [-] [Descartar N aleatórias] [+] funciona | Mesmo padrão do botão de compra — descarta N cartas aleatórias da mão, staggered com `Wait.time` entre cada uma |
+| 5.9 | Callbacks do painel recebem o objeto Player | `onDrawMidClick(player)` etc. usam `player.color`/`player.getHandObjects()` — não uma string de cor (mesma convenção de XmlUI do resto do projeto) |
 
 ---
 
