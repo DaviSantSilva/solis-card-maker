@@ -76,33 +76,26 @@ como ✅ é uma regressão e deve ser corrigida antes do commit.
 
 ---
 
-## 5. Gerenciador de Deck/Descarte do Jogador — arquitetura v3, dois objetos por corp
+## 5. Gerenciador de Deck/Descarte do Jogador (`hand-manager.lua`) — arquitetura v4, Layout Zones em 1 objeto
 
-> Dividido em DOIS objetos independentes por corp (10 no total): um para
-> o deck (posicionado à ESQUERDA do tabuleiro do jogador) e outro para
-> o descarte (à DIREITA). Cada um tem seu próprio script+UI, mas ambos
-> seguem o mesmo padrão de identificação por `Description` e acesso a
-> posições via `Global.call`.
-
-### 5A. Deck Manager (`deck-manager.lua` + `deck-manager-ui.xml`)
+> Substitui a versão de 10 objetos manuais (v3). Um único objeto gera
+> as 10 zonas (5 deck + 5 descarte) automaticamente via
+> `Global.call("getAllCorpIds")` — mesmo padrão do `market-manager.lua`.
+> Botões vivem numa âncora (escala 1:1) 2 unidades abaixo (Z) de cada
+> zona, sem risco de erro de escala.
 
 | # | Comportamento | Critério de aprovação |
 |---|---|---|
-| 5.1 | Um único par script+UI serve as 5 corps | `corpId = self.getDescription()` — objeto identifica a corp pela Description |
-| 5.2 | Botão ajustável [-] [Comprar até X] [+] funciona | X persiste entre saves via `onSave`/`onLoad`, mínimo 1. `updateUI()` atualiza `txt_drawMid` via `self.UI.setValue` |
-| 5.3 | Compra vai para a zona de mão física, não a mão oculta do TTS | `takeObject` com posição = coordenada de mesa (`positions().hand`), não `deck.deal()` |
-| 5.4 | Auto-reshuffle quando o deck acaba no meio da compra | Descarte é movido para a posição do deck e embaralhado automaticamente, sem interromper a operação de compra |
-| 5.5 | Botão "Reembaralhar" funciona | Move todo o descarte para a posição do deck e embaralha (`reshuffleDiscardIntoDraw`) |
-| 5.6 | Botão "Mover Deck" funciona | Move o deck inteiro para a posição de descarte — utilitário manual |
-
-### 5B. Discard Manager (`discard-manager.lua` + `discard-manager-ui.xml`)
-
-| # | Comportamento | Critério de aprovação |
-|---|---|---|
-| 5.7 | Um único par script+UI serve as 5 corps | Mesmo padrão de `corpId` via Description |
-| 5.8 | Botão "Descartar Mão" funciona | Move todas as cartas de `player.getHandObjects()` para o descarte |
-| 5.9 | Botão ajustável [-] [Descartar N aleatórias] [+] funciona | Mesmo padrão do botão de compra — descarta N cartas aleatórias da mão, staggered com `Wait.time` entre cada uma |
-| 5.10 | Callbacks dos painéis recebem o objeto Player | `onDrawMidClick(player)`, `onDiscardHandClick(player)` etc. usam `player.color`/`player.getHandObjects()` — não uma string de cor (mesma convenção de XmlUI do resto do projeto) |
+| 5.1 | As 10 zonas nascem automaticamente ao carregar | Loop sobre `getAllCorpIds()`, uma zona de deck + uma de descarte por corp, sem precisar criar objetos manualmente |
+| 5.2 | Zona de deck tem exatamente 2 grupos de botão | "Comprar até 5" (fixo) e "[-] Comprar X [+]" (ajustável) |
+| 5.3 | Zona de descarte tem exatamente 2 botões | "Descartar Mão" e "Refazer Deck" |
+| 5.4 | Botão ajustável [-] [Comprar X] [+] funciona | X persiste entre saves via `onSave`/`onLoad` (tabela `drawSettings`, chaveada por corp), mínimo 1 |
+| 5.5 | Compra vai para a zona de mão física, não a mão oculta do TTS | `takeObject` com posição = `positions().hand`, não `deck.deal()` |
+| 5.6 | Auto-reshuffle quando o deck acaba no meio da compra | Descarte é movido para a posição do deck e embaralhado automaticamente, sem interromper a compra |
+| 5.7 | "Refazer Deck" funciona | Move todo o descarte para a posição do deck e embaralha — substitui os antigos "Reembaralhar" + "Mover Deck" separados por uma única ação |
+| 5.8 | "Descartar Mão" funciona | Move todas as cartas de `Player[playerColor].getHandObjects()` para o descarte |
+| 5.9 | Botões usam função global única por corp+ação, não um despachante por "id" | `createButton()` chama `click_function` com `(objeto, cor, clique_alt)` — **sem** parâmetro de id (diferente do XmlUI declarativo). `registerHandlersForCorp()` gera `onDraw5_<corp>`, `onDrawMid_<corp>` etc. dinamicamente, mesmo padrão já validado em `market-manager.lua` (`onBuyClick_1..6`) |
+| 5.10 | Editar o label do botão "Comprar X" não precisa relocalizar via Physics.cast | Referência da âncora guardada em `deckAnchors[corp]` na criação — `editButton({index=2, ...})` direto |
 
 ---
 
@@ -136,6 +129,7 @@ como ✅ é uma regressão e deve ser corrigida antes do commit.
 ## Notas de manutenção
 
 - **Callbacks XmlUI vs createButton:** XmlUI (`onValueChanged`/`onClick` no XML) recebe o **objeto Player** como primeiro argumento. `createButton`'s `click_function` recebe a **cor como string**. Não confundir os dois — foi a causa de um bug sério (item 1.7).
+- **`createButton` NÃO tem parâmetro de `id` no callback — só XmlUI declarativo tem.** `click_function` de `createButton()` é chamado com `(objeto, cor_do_jogador, clique_alternativo)` — três argumentos fixos, nunca um "id" do botão. Um padrão `<Defaults onClick="buttonHandler">` de referência XmlUI (onde um único despachante lê o `id` do elemento clicado) **não se traduz diretamente** para botões criados via código — só funciona em painéis XML declarativos. Para múltiplos botões dinâmicos com a mesma ação-por-corp, gerar uma função global ÚNICA por combinação corp+ação (ex: `_G["onDraw5_" .. corp] = function(...) ... end`), nunca um despachante único lendo um id inexistente (item 5.9).
 - **Eixo de rotação de cartas:** Y gira no próprio plano (não troca face/verso). Z troca face/verso. Não confundir (item 3.2).
 - **`Locked` não tem default seguro:** sempre declarar explicitamente em qualquer novo `ObjectState` gerado via `spawnObjectData` (item 3.1).
 - **Copiar/colar do chat para o TTS pode corromper o script:** se um erro de sintaxe aparecer mesmo com o código validando limpo em `luac`, suspeitar de corrupção no clipboard antes de investigar lógica. Processo seguro: baixar o arquivo, copiar de um editor de texto puro, colar substituindo tudo.
