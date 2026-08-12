@@ -26,10 +26,7 @@
 -- em vez de um único despachante lendo um "id".
 -- ============================================================
 
-local CARD_WIDTH      = 2.2
-local CARD_LENGTH     = 3.15
-local ZONE_SCALE_MULT = 1.05
-local BELOW_OFFSET    = 2 -- botões ficam 2 unidades abaixo (Z) de cada zona
+local BELOW_OFFSET = 2 -- botões ficam 2 unidades abaixo (Z) de cada zona
 
 local deckAnchors  = {} -- corpId -> objeto âncora dos botões de compra (para editButton)
 local drawSettings = {} -- corpId -> { count = 5 }
@@ -90,28 +87,16 @@ function registerHandlersForCorp(corp)
     end
 end
 
--- ── criação das zonas ────────────────────────────────────────
-
-local function spawnZone(worldPos, name)
-    local zoneWidth  = CARD_WIDTH  * ZONE_SCALE_MULT
-    local zoneLength = CARD_LENGTH * ZONE_SCALE_MULT
-
-    spawnObject({
-        type     = "LayoutZone",
-        position = { worldPos.x, worldPos.y + 0.3, worldPos.z },
-        scale    = { zoneWidth, 1.5, zoneLength },
-        callback_function = function(zone)
-            zone.setName(name)
-            zone.LayoutZone.setOptions({
-                max_objects_per_group = 1,
-                combine_into_decks    = false,
-                trigger_for_face_down = true,
-                trigger_for_face_up   = true,
-                instant_refill        = false,
-            })
-        end,
-    })
-end
+-- ── criação das âncoras de botão ──────────────────────────────
+-- NOTA: nenhuma LayoutZone física é criada em cima do deck/descarte
+-- neste arquivo — diferente do market-manager.lua, aqui a detecção
+-- de carta usa Physics.cast (findPileAt) diretamente, não
+-- zone.getObjects(). Uma LayoutZone sentada exatamente na posição
+-- onde o deck é gerado pelo solis-global.lua causava um bug: a
+-- ÚLTIMA carta ficava suspensa (fisicamente 'presa' pelo
+-- gerenciamento ativo da zona) até o jogador clicar nela
+-- manualmente. Como a zona nunca era usada funcionalmente aqui,
+-- a solução foi simplesmente não criá-la.
 
 -- Cria uma âncora (escala 1:1, sem amplificação) numa posição de
 -- mundo exata — mesma técnica usada no botão de limpar mercado.
@@ -132,8 +117,6 @@ local function createButtonAnchor(worldPos, buttons, onReady)
 end
 
 function createDeckZone(corp, deckPos)
-    spawnZone(deckPos, "Deck " .. corp)
-
     local anchorPos = { deckPos.x, deckPos.y + 0.3, deckPos.z - BELOW_OFFSET }
 
     createButtonAnchor(anchorPos, {
@@ -191,8 +174,6 @@ function createDeckZone(corp, deckPos)
 end
 
 function createDiscardZone(corp, discardPos)
-    spawnZone(discardPos, "Descarte " .. corp)
-
     local anchorPos = { discardPos.x, discardPos.y + 0.3, discardPos.z - BELOW_OFFSET }
 
     createButtonAnchor(anchorPos, {
