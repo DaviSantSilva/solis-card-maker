@@ -93,6 +93,10 @@ como ✅ é uma regressão e deve ser corrigida antes do commit.
 | 5.5 | Compra vai para a zona de mão física, não a mão oculta do TTS | `takeObject` com posição = `positions().hand`, não `deck.deal()` |
 | 5.13 | Cartas compradas chegam com a face para cima | `rotation = { 0, 180, 0 }` explícito em `takeObject`/`setPositionSmooth` — sem isso, a carta preserva a orientação do deck (verso para cima) |
 | 5.14 | Botões organizados em layout vertical (2 linhas) por zona | Zona de deck: "Comprar até 5" em cima, trio "[-] [Comprar X] [+]" embaixo. Zona de descarte: "Descartar Mão" em cima, "Refazer Deck" embaixo. Ordem no array preservada (drawMid continua índice 2) |
+| 5.15 | Jogador de uma corp não consegue usar botões de outra corp | `blockIfWrongCorp(corp, playerColor)` checado em todos os 6 handlers, comparando `Global.call("getCorpForColor", playerColor)` contra o corp do botão |
+| 5.16 | "Comprar até 5" e "Comprar X" compram só a diferença necessária | `countCardsInHandZone(corp)` conta cartas realmente na zona de mão física (não `player.getHandObjects()`, que não se aplica aqui) — compra `alvo - atual`, nunca `alvo` cartas incondicionalmente |
+| 5.17 | Botões não se sobrepõem mais | `BELOW_OFFSET` 2→2.8, gap entre linhas 0.75/0.9→1.3 |
+| 5.18 | "Refazer Deck" move as cartas com a face para baixo | `rotation = {0, 180, 180}` explícito (rotZ=180 = verso visível) — antes preservava a rotação Y anterior sem forçar Z, podendo deixar face para cima |
 | 5.6 | Auto-reshuffle quando o deck acaba no meio da compra | Descarte é movido para a posição do deck e embaralhado automaticamente, sem interromper a compra |
 | 5.7 | "Refazer Deck" funciona | Move todo o descarte para a posição do deck e embaralha — substitui os antigos "Reembaralhar" + "Mover Deck" separados por uma única ação |
 | 5.8 | "Descartar Mão" funciona | Move todas as cartas de `Player[playerColor].getHandObjects()` para o descarte |
