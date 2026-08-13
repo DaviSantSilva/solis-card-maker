@@ -152,12 +152,15 @@ end
 function createDeckZone(corp, deckPos)
     local anchorPos = { deckPos.x, deckPos.y + 0.3, deckPos.z - BELOW_OFFSET }
 
+    -- Layout vertical: 2 linhas.
+    -- Linha 1 (z=0): "Comprar até 5", centralizado
+    -- Linha 2 (z=-0.75): [-] [Comprar X] [+], lado a lado
     createButtonAnchor(anchorPos, {
         {
             click_function = "onDraw5_" .. corp,
             function_owner = self,
             label          = "Comprar até 5",
-            position       = { -0.9, 0, 0 },
+            position       = { 0, 0, 0 },
             rotation       = { 0, 180, 0 },
             width          = 1700,
             height         = 700,
@@ -169,7 +172,7 @@ function createDeckZone(corp, deckPos)
             click_function = "onDrawMinus_" .. corp,
             function_owner = self,
             label          = "−",
-            position       = { 0.55, 0, 0 },
+            position       = { -0.6, 0, -0.75 },
             rotation       = { 0, 180, 0 },
             width          = 500,
             height         = 700,
@@ -181,7 +184,7 @@ function createDeckZone(corp, deckPos)
             click_function = "onDrawMid_" .. corp,
             function_owner = self,
             label          = "Comprar " .. drawSettings[corp].count,
-            position       = { 1.15, 0, 0 },
+            position       = { 0, 0, -0.75 },
             rotation       = { 0, 180, 0 },
             width          = 1700,
             height         = 700,
@@ -193,7 +196,7 @@ function createDeckZone(corp, deckPos)
             click_function = "onDrawPlus_" .. corp,
             function_owner = self,
             label          = "+",
-            position       = { 1.75, 0, 0 },
+            position       = { 0.6, 0, -0.75 },
             rotation       = { 0, 180, 0 },
             width          = 500,
             height         = 700,
@@ -209,12 +212,13 @@ end
 function createDiscardZone(corp, discardPos)
     local anchorPos = { discardPos.x, discardPos.y + 0.3, discardPos.z - BELOW_OFFSET }
 
+    -- Layout vertical: "Descartar Mão" em cima, "Refazer Deck" embaixo
     createButtonAnchor(anchorPos, {
         {
             click_function = "onDiscardHand_" .. corp,
             function_owner = self,
             label          = "Descartar Mão",
-            position       = { -0.55, 0, 0 },
+            position       = { 0, 0, 0 },
             rotation       = { 0, 180, 0 },
             width          = 1700,
             height         = 700,
@@ -226,7 +230,7 @@ function createDiscardZone(corp, discardPos)
             click_function = "onRebuildDeck_" .. corp,
             function_owner = self,
             label          = "Refazer Deck",
-            position       = { 0.55, 0, 0 },
+            position       = { 0, 0, -0.9 },
             rotation       = { 0, 180, 0 },
             width          = 1700,
             height         = 700,
@@ -326,9 +330,13 @@ function drawToHandZone(corp, count, playerColor)
         -- após um pequeno delay, até 3 vezes.
         local ok, err = pcall(function()
             if pile.type == "Deck" then
-                pile.takeObject({ position = targetPos, smooth = true })
+                -- rotation explícita: sem isso, a carta sai com a
+                -- mesma orientação do deck (verso pra cima). Face
+                -- pra cima = rotY=180 (leitura correta), rotZ=0.
+                pile.takeObject({ position = targetPos, rotation = { 0, 180, 0 }, smooth = true })
             else
                 pile.setPositionSmooth(targetPos, false, true)
+                pile.setRotationSmooth({ 0, 180, 0 }, false, true)
             end
         end)
 
