@@ -91,6 +91,8 @@ como ✅ é uma regressão e deve ser corrigida antes do commit.
 | 5.3 | Zona de descarte tem exatamente 2 botões | "Descartar Mão" e "Refazer Deck" |
 | 5.4 | Botão ajustável [-] [Comprar X] [+] funciona | X persiste entre saves via `onSave`/`onLoad` (tabela `drawSettings`, chaveada por corp), mínimo 1 |
 | 5.5 | Compra vai para a zona de mão física, não a mão oculta do TTS | `takeObject` com posição = `positions().hand`, não `deck.deal()` |
+| 5.13 | Cartas compradas chegam com a face para cima | `rotation = { 0, 180, 0 }` explícito em `takeObject`/`setPositionSmooth` — sem isso, a carta preserva a orientação do deck (verso para cima) |
+| 5.14 | Botões organizados em layout vertical (2 linhas) por zona | Zona de deck: "Comprar até 5" em cima, trio "[-] [Comprar X] [+]" embaixo. Zona de descarte: "Descartar Mão" em cima, "Refazer Deck" embaixo. Ordem no array preservada (drawMid continua índice 2) |
 | 5.6 | Auto-reshuffle quando o deck acaba no meio da compra | Descarte é movido para a posição do deck e embaralhado automaticamente, sem interromper a compra |
 | 5.7 | "Refazer Deck" funciona | Move todo o descarte para a posição do deck e embaralha — substitui os antigos "Reembaralhar" + "Mover Deck" separados por uma única ação |
 | 5.8 | "Descartar Mão" funciona | Move todas as cartas de `Player[playerColor].getHandObjects()` para o descarte |
