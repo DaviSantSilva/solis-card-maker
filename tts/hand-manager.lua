@@ -249,18 +249,28 @@ end
 -- ── detecção de carta nas posições de deck/descarte ─────────
 
 local function findPileAt(worldPos)
-    local hits = Physics.cast({
-        origin       = worldPos,
-        direction    = { 0, -1, 0 },
-        type         = 2,
-        size         = { 1, 1, 1 },
-        max_distance = 1,
-    })
-    for _, hit in ipairs(hits) do
-        local obj = hit.hit_object
-        if obj.type == "Deck" or obj.type == "Card" then return obj end
-    end
-    return nil
+    -- pcall envolvendo TUDO — o erro 'owned by different scripts'
+    -- acontecia dentro do próprio Physics.cast (ou ao acessar
+    -- hit_object logo em seguida), não nas chamadas de ação que
+    -- vêm depois. Sem isso, o pcall dos chamadores nunca chegava
+    -- a rodar, porque a falha já tinha ocorrido aqui dentro.
+    local ok, result = pcall(function()
+        local hits = Physics.cast({
+            origin       = worldPos,
+            direction    = { 0, -1, 0 },
+            type         = 2,
+            size         = { 1, 1, 1 },
+            max_distance = 1,
+        })
+        for _, hit in ipairs(hits) do
+            local obj = hit.hit_object
+            if obj.type == "Deck" or obj.type == "Card" then return obj end
+        end
+        return nil
+    end)
+
+    if not ok then return nil end
+    return result
 end
 
 -- ── comprar (vai para a zona de mão física) ──────────────────
