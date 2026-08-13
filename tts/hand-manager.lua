@@ -33,6 +33,14 @@ local drawSettings = {} -- corpId -> { count = 5 }
 
 -- ── ciclo de vida ──────────────────────────────────────────
 
+-- Janela de segurança: nenhuma ação de botão é aceita nos primeiros
+-- segundos após o carregamento da mesa. Objetos restaurados de um
+-- save (decks, cartas) ainda estão sendo internamente assentados
+-- pelo TTS logo após o load — interagir cedo demais causa o mesmo
+-- tipo de erro "owned by different scripts" que a corrida com o
+-- setup causava. Essa janela cobre AMBOS os cenários.
+local isReady = false
+
 function onLoad(savedData)
     if savedData ~= nil and savedData ~= "" then
         local ok, decoded = pcall(JSON.decode, savedData)
@@ -51,6 +59,15 @@ function onLoad(savedData)
         createDeckZone(corp, pos.deck)
         createDiscardZone(corp, pos.discard)
     end
+
+    Wait.time(function() isReady = true end, 4)
+end
+
+-- Checagem combinada: bloqueia ação se a mesa acabou de carregar
+-- OU se o setup (botão Começar) ainda está rodando em background.
+local function isBusy()
+    if not isReady then return true end
+    return Global.call("isSetupRunning")
 end
 
 function onSave()
@@ -249,9 +266,9 @@ end
 -- ── comprar (vai para a zona de mão física) ──────────────────
 
 function drawToHandZone(corp, count, playerColor)
-    if Global.call("isSetupRunning") then
+    if isBusy() then
         if playerColor then
-            broadcastToColor("Aguarde o setup terminar antes de comprar.", playerColor, { 1, 0.8, 0.2 })
+            broadcastToColor("Aguarde a mesa terminar de carregar/organizar antes de comprar.", playerColor, { 1, 0.8, 0.2 })
         end
         return
     end
@@ -259,7 +276,8 @@ function drawToHandZone(corp, count, playerColor)
     local pos      = Global.call("getCorpPositions", corp)
     local handBase = pos.hand
 
-    local function drawOne(i)
+    local function drawOne(i, retriesLeft)
+        retriesLeft = retriesLeft or 3
         local pile = findPileAt(pos.deck)
 
         if pile == nil then
@@ -272,7 +290,7 @@ function drawToHandZone(corp, count, playerColor)
             end
             discard.setPositionSmooth(pos.deck, false, true)
             discard.setRotationSmooth({ 0, discard.getRotation().y, 0 }, false, true)
-            Wait.time(function() drawOne(i) end, 0.7)
+            Wait.time(function() drawOne(i, retriesLeft) end, 0.7)
             return
         end
 
@@ -282,10 +300,27 @@ function drawToHandZone(corp, count, playerColor)
             z = handBase.z,
         }
 
-        if pile.type == "Deck" then
-            pile.takeObject({ position = targetPos, smooth = true })
-        else
-            pile.setPositionSmooth(targetPos, false, true)
+        -- pcall: logo após um reload da mesa salva, os objetos
+        -- (inclusive cartas) podem ainda estar terminando de
+        -- inicializar internamente por um instante, mesmo depois
+        -- de 'Loading complete' aparecer — uma ação bem nesse
+        -- momento pode disparar 'owned by different scripts'.
+        -- Em vez de propagar o erro, tenta de novo automaticamente
+        -- após um pequeno delay, até 3 vezes.
+        local ok, err = pcall(function()
+            if pile.type == "Deck" then
+                pile.takeObject({ position = targetPos, smooth = true })
+            else
+                pile.setPositionSmooth(targetPos, false, true)
+            end
+        end)
+
+        if not ok then
+            if retriesLeft > 0 then
+                Wait.time(function() drawOne(i, retriesLeft - 1) end, 0.5)
+            elseif playerColor then
+                broadcastToColor("A mesa ainda está organizando os objetos — tente comprar novamente em instantes.", playerColor, { 1, 0.6, 0.2 })
+            end
         end
     end
 
@@ -297,9 +332,9 @@ end
 -- ── descartar mão inteira ────────────────────────────────────
 
 function discardHand(corp, playerColor)
-    if Global.call("isSetupRunning") then
+    if isBusy() then
         if playerColor then
-            broadcastToColor("Aguarde o setup terminar antes de descartar.", playerColor, { 1, 0.8, 0.2 })
+            broadcastToColor("Aguarde a mesa terminar de carregar/organizar antes de descartar.", playerColor, { 1, 0.8, 0.2 })
         end
         return
     end
@@ -309,17 +344,23 @@ function discardHand(corp, playerColor)
     if player == nil then return end
 
     local pos = Global.call("getCorpPositions", corp)
-    for _, card in ipairs(player.getHandObjects()) do
-        card.setPosition(pos.discard)
+    local ok = pcall(function()
+        for _, card in ipairs(player.getHandObjects()) do
+            card.setPosition(pos.discard)
+        end
+    end)
+
+    if not ok and playerColor then
+        broadcastToColor("A mesa ainda está organizando os objetos — tente novamente em instantes.", playerColor, { 1, 0.6, 0.2 })
     end
 end
 
 -- ── refazer deck: descarte inteiro → deck, embaralha tudo ────
 
 function rebuildDeck(corp, playerColor)
-    if Global.call("isSetupRunning") then
+    if isBusy() then
         if playerColor then
-            broadcastToColor("Aguarde o setup terminar antes de refazer o deck.", playerColor, { 1, 0.8, 0.2 })
+            broadcastToColor("Aguarde a mesa terminar de carregar/organizar antes de refazer o deck.", playerColor, { 1, 0.8, 0.2 })
         end
         return
     end
@@ -333,8 +374,20 @@ function rebuildDeck(corp, playerColor)
         return
     end
 
-    discard.setPositionSmooth(pos.deck, false, true)
-    discard.setRotationSmooth({ 0, discard.getRotation().y, 0 }, false, true)
+    -- pcall: mesma proteção de drawToHandZone — evita propagar
+    -- 'owned by different scripts' se a mesa ainda estiver
+    -- terminando de assentar objetos logo após um reload.
+    local ok = pcall(function()
+        discard.setPositionSmooth(pos.deck, false, true)
+        discard.setRotationSmooth({ 0, discard.getRotation().y, 0 }, false, true)
+    end)
+
+    if not ok then
+        if playerColor then
+            broadcastToColor("A mesa ainda está organizando os objetos — tente novamente em instantes.", playerColor, { 1, 0.6, 0.2 })
+        end
+        return
+    end
 
     Wait.time(function()
         local pile = findPileAt(pos.deck)
