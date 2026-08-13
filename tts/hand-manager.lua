@@ -87,33 +87,33 @@ end
 -- Como a mão não é a mão oculta do TTS (é uma área na mesa com
 -- leque de cartas soltas), player.getHandObjects() não serviria —
 -- precisa varrer a área e somar Card/Deck encontrados ali.
+-- Conta quantas cartas existem na zona de mão física de uma corp.
+-- Como a mão não é a mão oculta do TTS (é uma área na mesa com
+-- leque de cartas soltas), player.getHandObjects() não serviria.
+--
+-- Physics.cast (tentativa anterior) se mostrou instável para esse
+-- caso — cartas em leque espalhado davam contagens inconsistentes
+-- entre chamadas (ex: 0 e 3 alternando para o mesmo estado real).
+-- getObjects() + distância é determinístico: sem depender de
+-- colisão/sweep físico, só matemática de posição.
 local function countCardsInHandZone(corp)
     local pos = Global.call("getCorpPositions", corp)
     local handPos = pos.hand
 
-    -- Área ampliada: o leque de cartas se espalha em X (+i*0.06)
-    -- e Y (+i*0.18) a cada carta comprada — com mãos maiores isso
-    -- soma bastante. Caixa generosa evita perder cartas nas bordas.
-    local hits = Physics.cast({
-        origin       = { handPos.x, handPos.y + 5, handPos.z },
-        direction    = { 0, -1, 0 },
-        type         = 2,
-        size         = { 5, 12, 5 },
-        max_distance = 12,
-    })
-
     local count = 0
-    local seen  = {}
-    for _, hit in ipairs(hits) do
-        local obj = hit.hit_object
-        local guid = obj.getGUID()
-        if (obj.type == "Card" or obj.type == "Deck") and not seen[guid] then
-            seen[guid] = true
-            count = count + ((obj.type == "Deck") and obj.getQuantity() or 1)
+    for _, obj in ipairs(getObjects()) do
+        if obj.type == "Card" or obj.type == "Deck" then
+            local objPos = obj.getPosition()
+            local dx = objPos.x - handPos.x
+            local dz = objPos.z - handPos.z
+            local horizDist = math.sqrt(dx * dx + dz * dz)
+            if horizDist < 1.5 then -- raio generoso o suficiente para o leque inteiro
+                count = count + ((obj.type == "Deck") and obj.getQuantity() or 1)
+            end
         end
     end
 
-    print("[Solis] countCardsInHandZone(" .. corp .. ") = " .. count .. " (" .. #hits .. " hits brutos)")
+    print("[Solis] countCardsInHandZone(" .. corp .. ") = " .. count)
     return count
 end
 
