@@ -97,6 +97,7 @@ como ✅ é uma regressão e deve ser corrigida antes do commit.
 | 5.9 | Botões usam função global única por corp+ação, não um despachante por "id" | `createButton()` chama `click_function` com `(objeto, cor, clique_alt)` — **sem** parâmetro de id (diferente do XmlUI declarativo). `registerHandlersForCorp()` gera `onDraw5_<corp>`, `onDrawMid_<corp>` etc. dinamicamente, mesmo padrão já validado em `market-manager.lua` (`onBuyClick_1..6`) |
 | 5.10 | Editar o label do botão "Comprar X" não precisa relocalizar via Physics.cast | Referência da âncora guardada em `deckAnchors[corp]` na criação — `editButton({index=2, ...})` direto |
 | 5.11 | Ações do hand-manager são bloqueadas enquanto o setup ainda está rodando em background | `Global.call("isSetupRunning")` checado no início de `drawToHandZone`, `discardHand`, `rebuildDeck` — evita corrida "owned by different scripts" com a cauda assíncrona do setup (shuffle/preenchimento do mercado) |
+| 5.12 | Ações se recuperam sozinhas de "owned by different scripts" após reload de mesa salva | Operações de risco (`takeObject`, `setPositionSmooth`, etc.) envolvidas em `pcall()` — se falhar, tenta de novo automaticamente após um pequeno delay (até 3x em `drawToHandZone`), em vez de propagar o erro cru pro console |
 
 ---
 
