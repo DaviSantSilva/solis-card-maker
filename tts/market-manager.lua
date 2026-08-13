@@ -49,6 +49,17 @@ local function createButtonAnchor(worldPos, buttonParams)
         position = worldPos,
         scale    = { 1, 1, 1 },
         callback_function = function(anchor)
+            -- Desativa qualquer trigger/gerenciamento de objetos —
+            -- a âncora é só um suporte de botão, não deve interagir
+            -- com cartas próximas (ver hand-manager.lua para o bug
+            -- que essa falta de configuração causava).
+            anchor.LayoutZone.setOptions({
+                max_objects_per_group = 0,
+                combine_into_decks    = false,
+                trigger_for_face_down = false,
+                trigger_for_face_up   = false,
+                instant_refill        = false,
+            })
             anchor.createButton(buttonParams)
         end,
     })

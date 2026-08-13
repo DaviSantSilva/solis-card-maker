@@ -108,6 +108,22 @@ local function createButtonAnchor(worldPos, buttons, onReady)
         position = worldPos,
         scale    = { 1, 1, 1 },
         callback_function = function(anchor)
+            -- IMPORTANTE: sem isso, a âncora herda o comportamento
+            -- PADRÃO de uma LayoutZone (que gerencia ativamente
+            -- objetos próximos). Como fica só 2 unidades do deck,
+            -- que é populado carta por carta durante o setup, ela
+            -- podia capturar uma carta de passagem — causando uma
+            -- carta extra suspensa, chegando tarde, depois de tudo
+            -- pronto. Desativa qualquer trigger/gerenciamento:
+            -- a âncora vira puramente um suporte de botão, inerte.
+            anchor.LayoutZone.setOptions({
+                max_objects_per_group = 0,
+                combine_into_decks    = false,
+                trigger_for_face_down = false,
+                trigger_for_face_up   = false,
+                instant_refill        = false,
+            })
+
             for _, btn in ipairs(buttons) do
                 anchor.createButton(btn)
             end
