@@ -26,7 +26,7 @@
 -- em vez de um único despachante lendo um "id".
 -- ============================================================
 
-local BELOW_OFFSET = 2 -- botões ficam 2 unidades abaixo (Z) de cada zona
+local BELOW_OFFSET = 2.8 -- botões ficam mais afastados abaixo (Z) de cada zona
 
 local deckAnchors  = {} -- corpId -> objeto âncora dos botões de compra (para editButton)
 local drawSettings = {} -- corpId -> { count = 5 }
@@ -70,6 +70,48 @@ local function isBusy()
     return Global.call("isSetupRunning")
 end
 
+-- Trava: só o jogador sentado na cor da corp pode usar os botões
+-- daquela corp. Retorna true (bloqueado) e avisa o jogador se
+-- ele tentar mexer nos botões de outra corp.
+local function blockIfWrongCorp(corp, playerColor)
+    if playerColor == nil then return true end
+    local ownerCorp = Global.call("getCorpForColor", playerColor)
+    if ownerCorp ~= corp then
+        broadcastToColor("Esses botões pertencem a outra corporação — só quem está sentado nela pode usá-los.", playerColor, { 1, 0.4, 0.4 })
+        return true
+    end
+    return false
+end
+
+-- Conta quantas cartas existem na zona de mão física de uma corp.
+-- Como a mão não é a mão oculta do TTS (é uma área na mesa com
+-- leque de cartas soltas), player.getHandObjects() não serviria —
+-- precisa varrer a área e somar Card/Deck encontrados ali.
+local function countCardsInHandZone(corp)
+    local pos = Global.call("getCorpPositions", corp)
+    local handPos = pos.hand
+
+    local hits = Physics.cast({
+        origin       = { handPos.x, handPos.y + 3, handPos.z },
+        direction    = { 0, -1, 0 },
+        type         = 2,
+        size         = { 3, 6, 3 }, -- ampla o suficiente para cobrir o leque inteiro
+        max_distance = 6,
+    })
+
+    local count = 0
+    local seen  = {}
+    for _, hit in ipairs(hits) do
+        local obj = hit.hit_object
+        local guid = obj.getGUID()
+        if (obj.type == "Card" or obj.type == "Deck") and not seen[guid] then
+            seen[guid] = true
+            count = count + ((obj.type == "Deck") and obj.getQuantity() or 1)
+        end
+    end
+    return count
+end
+
 function onSave()
     return JSON.encode(drawSettings)
 end
@@ -78,28 +120,47 @@ end
 
 function registerHandlersForCorp(corp)
     _G["onDraw5_" .. corp] = function(_, playerColor)
-        drawToHandZone(corp, 5, playerColor)
+        if blockIfWrongCorp(corp, playerColor) then return end
+        local current = countCardsInHandZone(corp)
+        local needed  = 5 - current
+        if needed <= 0 then
+            broadcastToColor("Sua mão já tem 5 ou mais cartas.", playerColor, { 1, 0.8, 0.2 })
+            return
+        end
+        drawToHandZone(corp, needed, playerColor)
     end
 
-    _G["onDrawMinus_" .. corp] = function()
+    _G["onDrawMinus_" .. corp] = function(_, playerColor)
+        if blockIfWrongCorp(corp, playerColor) then return end
         drawSettings[corp].count = math.max(1, drawSettings[corp].count - 1)
         updateDrawLabel(corp)
     end
 
-    _G["onDrawPlus_" .. corp] = function()
+    _G["onDrawPlus_" .. corp] = function(_, playerColor)
+        if blockIfWrongCorp(corp, playerColor) then return end
         drawSettings[corp].count = drawSettings[corp].count + 1
         updateDrawLabel(corp)
     end
 
     _G["onDrawMid_" .. corp] = function(_, playerColor)
-        drawToHandZone(corp, drawSettings[corp].count, playerColor)
+        if blockIfWrongCorp(corp, playerColor) then return end
+        local target  = drawSettings[corp].count
+        local current = countCardsInHandZone(corp)
+        local needed  = target - current
+        if needed <= 0 then
+            broadcastToColor("Sua mão já tem " .. target .. " ou mais cartas.", playerColor, { 1, 0.8, 0.2 })
+            return
+        end
+        drawToHandZone(corp, needed, playerColor)
     end
 
     _G["onDiscardHand_" .. corp] = function(_, playerColor)
+        if blockIfWrongCorp(corp, playerColor) then return end
         discardHand(corp, playerColor)
     end
 
     _G["onRebuildDeck_" .. corp] = function(_, playerColor)
+        if blockIfWrongCorp(corp, playerColor) then return end
         rebuildDeck(corp, playerColor)
     end
 end
@@ -152,9 +213,10 @@ end
 function createDeckZone(corp, deckPos)
     local anchorPos = { deckPos.x, deckPos.y + 0.3, deckPos.z - BELOW_OFFSET }
 
-    -- Layout vertical: 2 linhas.
+    -- Layout vertical: 2 linhas, com mais espaço entre elas.
     -- Linha 1 (z=0): "Comprar até 5", centralizado
-    -- Linha 2 (z=-0.75): [-] [Comprar X] [+], lado a lado
+    -- Linha 2 (z=-1.3): [-] [Comprar X] [+] — [-] e [+] próximos
+    -- das bordas do botão central, não mais espalhados
     createButtonAnchor(anchorPos, {
         {
             click_function = "onDraw5_" .. corp,
@@ -172,7 +234,7 @@ function createDeckZone(corp, deckPos)
             click_function = "onDrawMinus_" .. corp,
             function_owner = self,
             label          = "−",
-            position       = { -0.6, 0, -0.75 },
+            position       = { -0.42, 0, -1.3 },
             rotation       = { 0, 180, 0 },
             width          = 500,
             height         = 700,
@@ -184,7 +246,7 @@ function createDeckZone(corp, deckPos)
             click_function = "onDrawMid_" .. corp,
             function_owner = self,
             label          = "Comprar " .. drawSettings[corp].count,
-            position       = { 0, 0, -0.75 },
+            position       = { 0, 0, -1.3 },
             rotation       = { 0, 180, 0 },
             width          = 1700,
             height         = 700,
@@ -196,7 +258,7 @@ function createDeckZone(corp, deckPos)
             click_function = "onDrawPlus_" .. corp,
             function_owner = self,
             label          = "+",
-            position       = { 0.6, 0, -0.75 },
+            position       = { 0.42, 0, -1.3 },
             rotation       = { 0, 180, 0 },
             width          = 500,
             height         = 700,
@@ -230,7 +292,7 @@ function createDiscardZone(corp, discardPos)
             click_function = "onRebuildDeck_" .. corp,
             function_owner = self,
             label          = "Refazer Deck",
-            position       = { 0, 0, -0.9 },
+            position       = { 0, 0, -1.3 },
             rotation       = { 0, 180, 0 },
             width          = 1700,
             height         = 700,
@@ -404,7 +466,9 @@ function rebuildDeck(corp, playerColor)
     -- terminando de assentar objetos logo após um reload.
     local ok = pcall(function()
         discard.setPositionSmooth(pos.deck, false, true)
-        discard.setRotationSmooth({ 0, discard.getRotation().y, 0 }, false, true)
+        -- rotY=180 (leitura correta), rotZ=180 (verso pra cima —
+        -- deck normal, não deve ficar com a face visível)
+        discard.setRotationSmooth({ 0, 180, 180 }, false, true)
     end)
 
     if not ok then
