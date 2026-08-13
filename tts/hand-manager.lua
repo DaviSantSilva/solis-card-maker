@@ -91,12 +91,15 @@ local function countCardsInHandZone(corp)
     local pos = Global.call("getCorpPositions", corp)
     local handPos = pos.hand
 
+    -- Área ampliada: o leque de cartas se espalha em X (+i*0.06)
+    -- e Y (+i*0.18) a cada carta comprada — com mãos maiores isso
+    -- soma bastante. Caixa generosa evita perder cartas nas bordas.
     local hits = Physics.cast({
-        origin       = { handPos.x, handPos.y + 3, handPos.z },
+        origin       = { handPos.x, handPos.y + 5, handPos.z },
         direction    = { 0, -1, 0 },
         type         = 2,
-        size         = { 3, 6, 3 }, -- ampla o suficiente para cobrir o leque inteiro
-        max_distance = 6,
+        size         = { 5, 12, 5 },
+        max_distance = 12,
     })
 
     local count = 0
@@ -109,6 +112,8 @@ local function countCardsInHandZone(corp)
             count = count + ((obj.type == "Deck") and obj.getQuantity() or 1)
         end
     end
+
+    print("[Solis] countCardsInHandZone(" .. corp .. ") = " .. count .. " (" .. #hits .. " hits brutos)")
     return count
 end
 
@@ -234,13 +239,13 @@ function createDeckZone(corp, deckPos)
             click_function = "onDrawMinus_" .. corp,
             function_owner = self,
             label          = "−",
-            position       = { -0.42, 0, -1.3 },
+            position       = { -0.75, 0, -1.3 },
             rotation       = { 0, 180, 0 },
             width          = 500,
             height         = 700,
             font_size      = 350,
-            color          = { 0.086, 0.086, 0.086 },
-            font_color     = { 0.8, 0.8, 0.8 },
+            color          = { 0.6, 0.12, 0.12 },
+            font_color     = { 1, 1, 1 },
         },
         {
             click_function = "onDrawMid_" .. corp,
@@ -258,13 +263,13 @@ function createDeckZone(corp, deckPos)
             click_function = "onDrawPlus_" .. corp,
             function_owner = self,
             label          = "+",
-            position       = { 0.42, 0, -1.3 },
+            position       = { 0.75, 0, -1.3 },
             rotation       = { 0, 180, 0 },
             width          = 500,
             height         = 700,
             font_size      = 350,
-            color          = { 0.086, 0.086, 0.086 },
-            font_color     = { 0.8, 0.8, 0.8 },
+            color          = { 0.12, 0.5, 0.2 },
+            font_color     = { 1, 1, 1 },
         },
     }, function(anchor)
         deckAnchors[corp] = anchor
