@@ -255,12 +255,19 @@ local function findPileAt(worldPos)
     -- vêm depois. Sem isso, o pcall dos chamadores nunca chegava
     -- a rodar, porque a falha já tinha ocorrido aqui dentro.
     local ok, result = pcall(function()
+        -- Caixa ampla (mesma tolerância do diagnóstico findPileWide
+        -- em solis-global.lua) — a busca estreita anterior (1x1x1,
+        -- alcance 1) perdia o deck sempre que ele assentava um pouco
+        -- fora do ponto exato depois de embaralhar/física, mesmo com
+        -- as cartas genuinamente ali. O diagnóstico usava tolerância
+        -- maior e sempre encontrava — inconsistência entre o que o
+        -- diagnóstico via e o que o jogo realmente conseguia detectar.
         local hits = Physics.cast({
-            origin       = worldPos,
+            origin       = { worldPos.x, worldPos.y + 3, worldPos.z },
             direction    = { 0, -1, 0 },
             type         = 2,
-            size         = { 1, 1, 1 },
-            max_distance = 1,
+            size         = { 3, 6, 3 },
+            max_distance = 6,
         })
         for _, hit in ipairs(hits) do
             local obj = hit.hit_object
