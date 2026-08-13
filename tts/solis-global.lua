@@ -206,6 +206,13 @@ end
 
 local isSpawning = false
 
+-- Exposto para outros objetos (hand-manager.lua) checarem antes
+-- de mexer em qualquer deck/descarte — evita corrida com o final
+-- do setup (shuffle/preenchimento do mercado ainda em andamento).
+function isSetupRunning()
+    return isSpawning
+end
+
 function onStartSetupClick(player)
     if not isHost(player) then
         Global.UI.setValue("setupStatusText", "Apenas o host pode iniciar o setup.")

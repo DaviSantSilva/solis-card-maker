@@ -249,6 +249,13 @@ end
 -- ── comprar (vai para a zona de mão física) ──────────────────
 
 function drawToHandZone(corp, count, playerColor)
+    if Global.call("isSetupRunning") then
+        if playerColor then
+            broadcastToColor("Aguarde o setup terminar antes de comprar.", playerColor, { 1, 0.8, 0.2 })
+        end
+        return
+    end
+
     local pos      = Global.call("getCorpPositions", corp)
     local handBase = pos.hand
 
@@ -290,6 +297,13 @@ end
 -- ── descartar mão inteira ────────────────────────────────────
 
 function discardHand(corp, playerColor)
+    if Global.call("isSetupRunning") then
+        if playerColor then
+            broadcastToColor("Aguarde o setup terminar antes de descartar.", playerColor, { 1, 0.8, 0.2 })
+        end
+        return
+    end
+
     if playerColor == nil then return end
     local player = Player[playerColor]
     if player == nil then return end
@@ -303,6 +317,13 @@ end
 -- ── refazer deck: descarte inteiro → deck, embaralha tudo ────
 
 function rebuildDeck(corp, playerColor)
+    if Global.call("isSetupRunning") then
+        if playerColor then
+            broadcastToColor("Aguarde o setup terminar antes de refazer o deck.", playerColor, { 1, 0.8, 0.2 })
+        end
+        return
+    end
+
     local pos = Global.call("getCorpPositions", corp)
     local discard = findPileAt(pos.discard)
     if discard == nil then
