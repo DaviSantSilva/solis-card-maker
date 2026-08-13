@@ -475,8 +475,11 @@ function processSpawnQueue(index)
     if index > #spawnQueue then
         Wait.time(function()
             mergeAllPendingDecks()
-            isSpawning = false
-            Global.UI.setAttribute("startSetupButton", "interactable", "true")
+            -- isSpawning e o botão 'Começar' só voltam ao normal
+            -- no FINAL de toda a cadeia de background disparada por
+            -- mergeAllPendingDecks (embaralhar → mercado →
+            -- diagnóstico → mensagem final, ~8.6s) — ver o
+            -- Wait.time final dentro dela.
         end, 0.6)
         Global.UI.setValue("setupStatusText", "Setup pronto!")
         return
@@ -611,6 +614,18 @@ function mergeAllPendingDecks()
 
                 Wait.time(function()
                     onCloseClick()
+                    -- Só AQUI a cadeia toda de background realmente
+                    -- termina (embaralhar + preencher mercado +
+                    -- diagnóstico + mensagem final = ~8.6s no total).
+                    -- isSpawning precisa continuar true até este
+                    -- ponto — resetá-lo antes (como estava, logo
+                    -- após chamar mergeAllPendingDecks) deixava a
+                    -- trava isSetupRunning() do hand-manager.lua
+                    -- inútil na prática, já que ela liberava quase
+                    -- 8 segundos antes do Global realmente parar
+                    -- de mexer nos decks.
+                    isSpawning = false
+                    Global.UI.setAttribute("startSetupButton", "interactable", "true")
                 end, 5)
             end, 2)
         end, 1)
