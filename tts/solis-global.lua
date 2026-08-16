@@ -79,6 +79,21 @@ function getAllCorpIds()
     return ids
 end
 
+-- Posição da área de JOGO de cada corp — onde o jogador baixa as
+-- cartas que está jogando no turno. Fica entre o deck e o descarte
+-- (ponto médio), alinhada com eles no eixo Z.
+-- Calculada automaticamente; se quiser posições específicas, basta
+-- trocar por valores fixos aqui, como as demais.
+function getCorpPlayPosition(corp)
+    local p = POSITIONS.corp[corp]
+    if p == nil then return nil end
+    return {
+        x = (p.deck.x + p.discard.x) / 2,
+        y = p.deck.y,
+        z = (p.deck.z + p.discard.z) / 2,
+    }
+end
+
 -- ============================================================
 -- MENU DE SETUP
 -- ============================================================
@@ -224,7 +239,13 @@ function onStartSetupClick(player)
     end
     isSpawning = true
     Global.UI.setAttribute("startSetupButton", "interactable", "false")
-    Global.UI.setValue("setupStatusText", "Buscando cartas…")
+
+    -- Fecha o menu na hora e avisa todo mundo — o setup roda
+    -- inteiro em background, não faz sentido segurar o painel aberto.
+    onCloseClick()
+    broadcastToAll("Fazendo setup do jogo…", { 0.4, 0.7, 1 })
+    printToAll("Fazendo setup do jogo…", { 0.4, 0.7, 1 })
+
     fetchManifestAndSpawn()
 end
 
@@ -343,28 +364,64 @@ end
 -- Busca numa área mais ampla (não só o ponto exato) para pegar
 -- cartas que tenham ficado espalhadas de tentativas anteriores.
 local function clearPileAt(worldPos)
-    local hits = Physics.cast({
-        origin       = { worldPos.x, worldPos.y + 3, worldPos.z },
-        direction    = { 0, -1, 0 },
-        type         = 2,
-        size         = { 3, 6, 3 }, -- área ampla o suficiente para pegar cartas dispersas
-        max_distance = 6,
-    })
-
     local destroyed = {}
-    for _, hit in ipairs(hits) do
-        local obj = hit.hit_object
-        if (obj.type == "Deck" or obj.type == "Card") and not destroyed[obj.getGUID()] then
-            destroyed[obj.getGUID()] = true
-            obj.destruct()
+
+    local function destroy(obj)
+        if obj == nil then return end
+        local guid = obj.getGUID()
+        if (obj.type == "Deck" or obj.type == "Card") and not destroyed[guid] then
+            destroyed[guid] = true
+            pcall(function() obj.destruct() end)
+        end
+    end
+
+    -- 1. Physics.cast — pega o que está fisicamente empilhado ali
+    local ok, hits = pcall(function()
+        return Physics.cast({
+            origin       = { worldPos.x, worldPos.y + 3, worldPos.z },
+            direction    = { 0, -1, 0 },
+            type         = 2,
+            size         = { 3, 6, 3 },
+            max_distance = 6,
+        })
+    end)
+    if ok and hits ~= nil then
+        for _, hit in ipairs(hits) do destroy(hit.hit_object) end
+    end
+
+    -- 2. Varredura por distância — pega o que o raycast não alcança
+    --    (ex: cartas dentro de Hand Zones do TTS ficam presas à zona
+    --    e podem não aparecer numa varredura física normal)
+    for _, obj in ipairs(getObjects()) do
+        if obj.type == "Card" or obj.type == "Deck" then
+            local p  = obj.getPosition()
+            local dx = p.x - worldPos.x
+            local dz = p.z - worldPos.z
+            if math.sqrt(dx * dx + dz * dz) < 2.5 then destroy(obj) end
         end
     end
 end
 
+-- Limpa TODAS as posições de jogo antes de um novo setup —
+-- não só os decks. Sem isso, cartas de uma partida anterior
+-- (mercado preenchido, descartes, mãos, áreas de jogo) sobravam
+-- e se misturavam com as novas.
 local function clearAllTargetPositions()
+    -- Mercado: deck, descarte e as 6 zonas de compra
     clearPileAt(POSITIONS.market.deck)
-    for _, pos in pairs(POSITIONS.corp) do
+    clearPileAt(POSITIONS.market.discard)
+    for _, slotPos in ipairs(POSITIONS.market.slots) do
+        clearPileAt(slotPos)
+    end
+
+    -- Cada corp: deck, descarte, mão e área de jogo
+    for corp, pos in pairs(POSITIONS.corp) do
         clearPileAt(pos.deck)
+        clearPileAt(pos.discard)
+        clearPileAt(pos.hand)
+
+        local playPos = getCorpPlayPosition(corp)
+        if playPos ~= nil then clearPileAt(playPos) end
     end
 end
 
@@ -579,12 +636,32 @@ end
 -- Se group() não se comportar como esperado na sua versão do TTS,
 -- a alternativa é encadear obj.putObject(proximoObj) manualmente.
 function mergeAllPendingDecks()
-    for _, objs in pairs(decksByPositionKey) do
+    -- group() não é instantâneo — fundir várias cartas soltas num
+    -- único Deck leva um tempo real para assentar fisicamente.
+    -- Chamar as 6 posições (mercado + 5 corps) todas no mesmo laço,
+    -- sem intervalo, fazia as últimas da lista (ordem de pairs()
+    -- não é determinística) não terminarem de fundir antes do
+    -- embaralhamento seguinte tentar mexer nelas — resultando em
+    -- contagens erradas/inconsistentes por corp. Escalonado agora
+    -- com 0.3s entre cada chamada de group().
+    local positions = {}
+    for key, objs in pairs(decksByPositionKey) do
         if #objs > 1 then
-            group(objs)
+            table.insert(positions, objs)
         end
     end
     decksByPositionKey = {}
+
+    for i, objs in ipairs(positions) do
+        Wait.time(function()
+            group(objs)
+        end, (i - 1) * 0.3)
+    end
+
+    -- Tempo total para TODAS as fusões terminarem antes de seguir:
+    -- (nº de posições × 0.3s de espaçamento) + folga para a última
+    -- fusão assentar fisicamente.
+    local totalMergeTime = (#positions * 0.3) + 1
 
     -- 1. Embaralha todos os decks recém-formados
     Wait.time(function()
@@ -610,7 +687,8 @@ function mergeAllPendingDecks()
                 end
                 print("[Solis] " .. report) -- mantido só no console, para debug futuro
 
-                Global.UI.setValue("setupStatusText", "Aproveite o jogo, boa sorte!")
+                broadcastToAll("Setup finalizado, boa partida!", { 0.2, 0.9, 0.4 })
+                printToAll("Setup finalizado, boa partida!", { 0.2, 0.9, 0.4 })
 
                 Wait.time(function()
                     onCloseClick()
@@ -629,5 +707,5 @@ function mergeAllPendingDecks()
                 end, 5)
             end, 2)
         end, 1)
-    end, 0.6)
+    end, totalMergeTime)
 end
