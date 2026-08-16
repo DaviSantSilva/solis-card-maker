@@ -11,7 +11,16 @@
 -- 1. Cole solis-global.lua no Global Script da partida ANTES deste.
 -- 2. Crie UM único objeto discreto em qualquer lugar da mesa.
 -- 3. Cole este script na aba SCRIPT desse objeto.
--- Tudo nasce automaticamente ao carregar.
+-- 4. Crie manualmente (F3 → Layout Zone) uma zona de jogo para
+--    cada corporação, nomeada "{corp} game zone" — por exemplo:
+--    "tabajara game zone", "zenite game zone", "atomic game zone",
+--    "atto game zone", "core game zone".
+--    O match é tolerante a maiúsculas e a texto extra no nome,
+--    então "Tabajara Corporation Game Zone" também funciona.
+--
+-- Os botões nascem automaticamente ao carregar; as zonas de jogo
+-- são as que você criar manualmente (tamanho e posição a seu
+-- critério — o script só precisa do nome para encontrá-las).
 --
 -- Fluxo pretendido:
 --   Comprar até 5 → cartas vão para a mão
@@ -26,10 +35,28 @@
 -- ============================================================
 
 local BELOW_OFFSET = 2.8 -- botões ficam abaixo (Z) de cada zona
-local PLAY_RADIUS  = 3.0 -- raio de varredura da zona de jogo
 
-local playZones = {} -- corpId -> ScriptingTrigger da área de jogo
-local isReady   = false
+local gameZoneCache = {} -- corpId -> zona de jogo (Layout Zone nomeada)
+local isReady       = false
+
+-- Localiza (e memoriza) a zona de jogo de uma corp. As zonas são
+-- criadas manualmente no TTS (F3 → Layout Zone) e nomeadas
+-- "{corp} game zone" — ex: "Tabajara game zone".
+-- Busca lazy: só na primeira vez que for realmente necessária,
+-- já que as zonas podem não existir ainda no onLoad deste objeto.
+local function getGameZone(corp)
+    local cached = gameZoneCache[corp]
+    if cached ~= nil then
+        -- valida que ainda existe (pode ter sido apagada na mesa)
+        local ok, name = pcall(function() return cached.getName() end)
+        if ok and name ~= nil then return cached end
+        gameZoneCache[corp] = nil
+    end
+
+    local found = Global.call("findCorpGameZone", corp)
+    gameZoneCache[corp] = found
+    return found
+end
 
 -- ── ciclo de vida ──────────────────────────────────────────
 
@@ -40,7 +67,6 @@ function onLoad()
 
         local pos = Global.call("getCorpPositions", corp)
         createDeckZone(corp, pos.deck)
-        createPlayZone(corp)
         createDiscardZone(corp, pos.discard)
     end
 
@@ -148,24 +174,6 @@ function createDeckZone(corp, deckPos)
             color          = { 0.086, 0.086, 0.086 },
             font_color     = { 0.8, 0.8, 0.8 },
         },
-    })
-end
-
--- Área de JOGO: ScriptingTrigger (não LayoutZone) — detecta o que
--- está dentro dela sem gerenciar/mover os objetos. LayoutZone
--- causaria os mesmos problemas de "carta presa" já enfrentados.
-function createPlayZone(corp)
-    local playPos = Global.call("getCorpPlayPosition", corp)
-    if playPos == nil then return end
-
-    spawnObject({
-        type     = "ScriptingTrigger",
-        position = { playPos.x, playPos.y + 0.5, playPos.z },
-        scale    = { 6, 3, 4 },
-        callback_function = function(zone)
-            zone.setName("Área de Jogo — " .. corp)
-            playZones[corp] = zone
-        end,
     })
 end
 
@@ -284,34 +292,22 @@ function discardPlayArea(corp, playerColor)
         return
     end
 
-    local pos      = Global.call("getCorpPositions", corp)
-    local zone     = playZones[corp]
-    local playPos  = Global.call("getCorpPlayPosition", corp)
-    local toDiscard = {}
+    local pos  = Global.call("getCorpPositions", corp)
+    local zone = getGameZone(corp)
 
-    -- Preferência: o próprio ScriptingTrigger (autoritativo sobre
-    -- o que está dentro dele). Fallback: varredura por distância,
-    -- caso a zona ainda não esteja pronta.
-    if zone ~= nil then
-        local ok, objs = pcall(function() return zone.getObjects() end)
-        if ok and objs ~= nil then
-            for _, obj in ipairs(objs) do
-                if obj.type == "Card" or obj.type == "Deck" then
-                    table.insert(toDiscard, obj)
-                end
-            end
+    if zone == nil then
+        if playerColor then
+            broadcastToColor("Zona de jogo da " .. corp .. " não encontrada — crie uma Layout Zone chamada \"" .. corp .. " game zone\".", playerColor, { 1, 0.4, 0.4 })
         end
+        return
     end
 
-    if #toDiscard == 0 and playPos ~= nil then
-        for _, obj in ipairs(getObjects()) do
+    local toDiscard = {}
+    local ok, objs = pcall(function() return zone.getObjects() end)
+    if ok and objs ~= nil then
+        for _, obj in ipairs(objs) do
             if obj.type == "Card" or obj.type == "Deck" then
-                local p  = obj.getPosition()
-                local dx = p.x - playPos.x
-                local dz = p.z - playPos.z
-                if math.sqrt(dx * dx + dz * dz) < PLAY_RADIUS then
-                    table.insert(toDiscard, obj)
-                end
+                table.insert(toDiscard, obj)
             end
         end
     end
@@ -323,14 +319,14 @@ function discardPlayArea(corp, playerColor)
         return
     end
 
-    local ok = pcall(function()
+    local moved = pcall(function()
         for _, card in ipairs(toDiscard) do
             card.setPositionSmooth(pos.discard, false, true)
             card.setRotationSmooth({ 0, 180, 0 }, false, true)
         end
     end)
 
-    if not ok and playerColor then
+    if not moved and playerColor then
         broadcastToColor("A mesa ainda está organizando os objetos — tente novamente em instantes.", playerColor, { 1, 0.6, 0.2 })
     end
 end

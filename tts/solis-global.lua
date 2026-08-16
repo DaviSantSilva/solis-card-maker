@@ -79,19 +79,21 @@ function getAllCorpIds()
     return ids
 end
 
--- Posição da área de JOGO de cada corp — onde o jogador baixa as
--- cartas que está jogando no turno. Fica entre o deck e o descarte
--- (ponto médio), alinhada com eles no eixo Z.
--- Calculada automaticamente; se quiser posições específicas, basta
--- trocar por valores fixos aqui, como as demais.
-function getCorpPlayPosition(corp)
-    local p = POSITIONS.corp[corp]
-    if p == nil then return nil end
-    return {
-        x = (p.deck.x + p.discard.x) / 2,
-        y = p.deck.y,
-        z = (p.deck.z + p.discard.z) / 2,
-    }
+-- Localiza a zona de JOGO de uma corp pelo NOME do objeto.
+-- As zonas são criadas manualmente no TTS (F3 → Layout Zone) e
+-- nomeadas "{corp} game zone" — ex: "Tabajara game zone".
+-- O match é tolerante: basta o nome conter o id da corp e a
+-- expressão "game zone" (ambos case-insensitive), então
+-- "Tabajara Corporation Game Zone" também funciona.
+function findCorpGameZone(corp)
+    local needle = corp:lower()
+    for _, obj in ipairs(getObjects()) do
+        local name = (obj.getName() or ""):lower()
+        if name:find(needle, 1, true) and name:find("game zone", 1, true) then
+            return obj
+        end
+    end
+    return nil
 end
 
 -- ============================================================
@@ -420,8 +422,20 @@ local function clearAllTargetPositions()
         clearPileAt(pos.discard)
         clearPileAt(pos.hand)
 
-        local playPos = getCorpPlayPosition(corp)
-        if playPos ~= nil then clearPileAt(playPos) end
+        -- Área de jogo: zona nomeada criada manualmente no TTS.
+        -- Limpa pelo conteúdo da própria zona (autoritativo),
+        -- não por varredura de posição.
+        local gameZone = findCorpGameZone(corp)
+        if gameZone ~= nil then
+            local ok, objs = pcall(function() return gameZone.getObjects() end)
+            if ok and objs ~= nil then
+                for _, obj in ipairs(objs) do
+                    if obj.type == "Card" or obj.type == "Deck" then
+                        pcall(function() obj.destruct() end)
+                    end
+                end
+            end
+        end
     end
 end
 
@@ -687,24 +701,17 @@ function mergeAllPendingDecks()
                 end
                 print("[Solis] " .. report) -- mantido só no console, para debug futuro
 
+                -- Neste ponto todo o trabalho pesado JÁ terminou
+                -- (merge → shuffle → preencher mercado → diagnóstico).
+                -- Libera a trava JUNTO com a mensagem — antes ela só
+                -- caía 5s depois, então o primeiro clique em
+                -- "Comprar até 5" logo após ver "Setup finalizado"
+                -- era rejeitado com "aguarde a mesa terminar".
+                isSpawning = false
+                Global.UI.setAttribute("startSetupButton", "interactable", "true")
+
                 broadcastToAll("Setup finalizado, boa partida!", { 0.2, 0.9, 0.4 })
                 printToAll("Setup finalizado, boa partida!", { 0.2, 0.9, 0.4 })
-
-                Wait.time(function()
-                    onCloseClick()
-                    -- Só AQUI a cadeia toda de background realmente
-                    -- termina (embaralhar + preencher mercado +
-                    -- diagnóstico + mensagem final = ~8.6s no total).
-                    -- isSpawning precisa continuar true até este
-                    -- ponto — resetá-lo antes (como estava, logo
-                    -- após chamar mergeAllPendingDecks) deixava a
-                    -- trava isSetupRunning() do hand-manager.lua
-                    -- inútil na prática, já que ela liberava quase
-                    -- 8 segundos antes do Global realmente parar
-                    -- de mexer nos decks.
-                    isSpawning = false
-                    Global.UI.setAttribute("startSetupButton", "interactable", "true")
-                end, 5)
             end, 2)
         end, 1)
     end, totalMergeTime)
