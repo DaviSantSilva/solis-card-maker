@@ -12,45 +12,48 @@
 -- 3. Cole este script na aba SCRIPT desse objeto.
 -- As 10 zonas + botões nascem automaticamente ao carregar.
 --
--- Zona de deck — 2 grupos de botão:
---   "Comprar até 5" (fixo) e "Comprar" (ajustável, com [-] [+])
+-- Zona de deck — 1 botão: "Comprar até 5"
+--   Verifica quantas cartas o jogador tem na mão (contagem própria,
+--   rastreada internamente — ver nota abaixo) e compra só a
+--   diferença necessária para chegar a 5. Se já tem 5+, avisa.
 -- Zona de descarte — 2 botões:
 --   "Descartar Mão" e "Refazer Deck" (descarte inteiro → deck,
 --   embaralha tudo)
 --
+-- SOBRE A CONTAGEM DE MÃO: como a mão é uma zona física na mesa
+-- (não a mão oculta do TTS), não existe um jeito 100% confiável
+-- de detectar fisicamente quantas cartas soltas estão lá — testado
+-- com Physics.cast (instável, hits inconsistentes) e getObjects()+
+-- distância (também não bateu). A solução robusta adotada foi
+-- RASTREAR a contagem internamente: handCounts[corp] incrementa
+-- a cada compra, zera ao descartar a mão. Isso é determinístico e
+-- sempre correto DESDE QUE o jogador use os botões — se alguém
+-- arrastar uma carta manualmente para fora da mão sem descartar
+-- pelo botão, a contagem interna pode ficar desatualizada.
+--
 -- IMPORTANTE: createButton() chama click_function com
 -- (objeto, cor_do_jogador, clique_alternativo) — NÃO existe um
--- parâmetro de id, diferente do XmlUI declarativo. Por isso cada
--- botão usa uma função global ÚNICA gerada dinamicamente por
--- corp+ação (mesmo padrão já validado em market-manager.lua),
--- em vez de um único despachante lendo um "id".
+-- parâmetro de id. Cada botão usa uma função global ÚNICA gerada
+-- dinamicamente por corp+ação (mesmo padrão de market-manager.lua).
 -- ============================================================
 
-local BELOW_OFFSET = 2.8 -- botões ficam mais afastados abaixo (Z) de cada zona
+local BELOW_OFFSET = 2.8 -- botões ficam abaixo (Z) de cada zona
 
-local deckAnchors  = {} -- corpId -> objeto âncora dos botões de compra (para editButton)
-local drawSettings = {} -- corpId -> { count = 5 }
+local handCounts = {} -- corpId -> nº de cartas rastreadas na mão
+local isReady    = false
 
 -- ── ciclo de vida ──────────────────────────────────────────
-
--- Janela de segurança: nenhuma ação de botão é aceita nos primeiros
--- segundos após o carregamento da mesa. Objetos restaurados de um
--- save (decks, cartas) ainda estão sendo internamente assentados
--- pelo TTS logo após o load — interagir cedo demais causa o mesmo
--- tipo de erro "owned by different scripts" que a corrida com o
--- setup causava. Essa janela cobre AMBOS os cenários.
-local isReady = false
 
 function onLoad(savedData)
     if savedData ~= nil and savedData ~= "" then
         local ok, decoded = pcall(JSON.decode, savedData)
-        if ok and decoded then drawSettings = decoded end
+        if ok and decoded then handCounts = decoded end
     end
 
     local corpIds = Global.call("getAllCorpIds")
     for _, corp in ipairs(corpIds) do
-        if drawSettings[corp] == nil then
-            drawSettings[corp] = { count = 5 }
+        if handCounts[corp] == nil then
+            handCounts[corp] = 0
         end
 
         registerHandlersForCorp(corp)
@@ -63,16 +66,17 @@ function onLoad(savedData)
     Wait.time(function() isReady = true end, 4)
 end
 
--- Checagem combinada: bloqueia ação se a mesa acabou de carregar
--- OU se o setup (botão Começar) ainda está rodando em background.
+function onSave()
+    return JSON.encode(handCounts)
+end
+
 local function isBusy()
     if not isReady then return true end
     return Global.call("isSetupRunning")
 end
 
 -- Trava: só o jogador sentado na cor da corp pode usar os botões
--- daquela corp. Retorna true (bloqueado) e avisa o jogador se
--- ele tentar mexer nos botões de outra corp.
+-- daquela corp.
 local function blockIfWrongCorp(corp, playerColor)
     if playerColor == nil then return true end
     local ownerCorp = Global.call("getCorpForColor", playerColor)
@@ -83,42 +87,9 @@ local function blockIfWrongCorp(corp, playerColor)
     return false
 end
 
--- Conta quantas cartas existem na zona de mão física de uma corp.
--- Como a mão não é a mão oculta do TTS (é uma área na mesa com
--- leque de cartas soltas), player.getHandObjects() não serviria —
--- precisa varrer a área e somar Card/Deck encontrados ali.
--- Conta quantas cartas existem na zona de mão física de uma corp.
--- Como a mão não é a mão oculta do TTS (é uma área na mesa com
--- leque de cartas soltas), player.getHandObjects() não serviria.
---
--- Physics.cast (tentativa anterior) se mostrou instável para esse
--- caso — cartas em leque espalhado davam contagens inconsistentes
--- entre chamadas (ex: 0 e 3 alternando para o mesmo estado real).
--- getObjects() + distância é determinístico: sem depender de
--- colisão/sweep físico, só matemática de posição.
-local function countCardsInHandZone(corp)
-    local pos = Global.call("getCorpPositions", corp)
-    local handPos = pos.hand
-
-    local count = 0
-    for _, obj in ipairs(getObjects()) do
-        if obj.type == "Card" or obj.type == "Deck" then
-            local objPos = obj.getPosition()
-            local dx = objPos.x - handPos.x
-            local dz = objPos.z - handPos.z
-            local horizDist = math.sqrt(dx * dx + dz * dz)
-            if horizDist < 1.5 then -- raio generoso o suficiente para o leque inteiro
-                count = count + ((obj.type == "Deck") and obj.getQuantity() or 1)
-            end
-        end
-    end
-
-    print("[Solis] countCardsInHandZone(" .. corp .. ") = " .. count)
-    return count
-end
-
-function onSave()
-    return JSON.encode(drawSettings)
+local function playerName(playerColor)
+    local player = Player[playerColor]
+    return (player ~= nil and player.steam_name) or playerColor
 end
 
 -- ── registro de handlers únicos por corp ─────────────────────
@@ -126,36 +97,18 @@ end
 function registerHandlersForCorp(corp)
     _G["onDraw5_" .. corp] = function(_, playerColor)
         if blockIfWrongCorp(corp, playerColor) then return end
-        local current = countCardsInHandZone(corp)
-        local needed  = 5 - current
-        if needed <= 0 then
-            broadcastToColor("Sua mão já tem 5 ou mais cartas.", playerColor, { 1, 0.8, 0.2 })
+        if isBusy() then
+            broadcastToColor("Aguarde a mesa terminar de carregar/organizar antes de comprar.", playerColor, { 1, 0.8, 0.2 })
             return
         end
-        drawToHandZone(corp, needed, playerColor)
-    end
 
-    _G["onDrawMinus_" .. corp] = function(_, playerColor)
-        if blockIfWrongCorp(corp, playerColor) then return end
-        drawSettings[corp].count = math.max(1, drawSettings[corp].count - 1)
-        updateDrawLabel(corp)
-    end
-
-    _G["onDrawPlus_" .. corp] = function(_, playerColor)
-        if blockIfWrongCorp(corp, playerColor) then return end
-        drawSettings[corp].count = drawSettings[corp].count + 1
-        updateDrawLabel(corp)
-    end
-
-    _G["onDrawMid_" .. corp] = function(_, playerColor)
-        if blockIfWrongCorp(corp, playerColor) then return end
-        local target  = drawSettings[corp].count
-        local current = countCardsInHandZone(corp)
-        local needed  = target - current
-        if needed <= 0 then
-            broadcastToColor("Sua mão já tem " .. target .. " ou mais cartas.", playerColor, { 1, 0.8, 0.2 })
+        local current = handCounts[corp] or 0
+        if current >= 5 then
+            broadcastToColor("Você já tem 5 cartas, " .. playerName(playerColor) .. ".", playerColor, { 1, 0.8, 0.2 })
             return
         end
+
+        local needed = 5 - current
         drawToHandZone(corp, needed, playerColor)
     end
 
@@ -171,34 +124,15 @@ function registerHandlersForCorp(corp)
 end
 
 -- ── criação das âncoras de botão ──────────────────────────────
--- NOTA: nenhuma LayoutZone física é criada em cima do deck/descarte
--- neste arquivo — diferente do market-manager.lua, aqui a detecção
--- de carta usa Physics.cast (findPileAt) diretamente, não
--- zone.getObjects(). Uma LayoutZone sentada exatamente na posição
--- onde o deck é gerado pelo solis-global.lua causava um bug: a
--- ÚLTIMA carta ficava suspensa (fisicamente 'presa' pelo
--- gerenciamento ativo da zona) até o jogador clicar nela
--- manualmente. Como a zona nunca era usada funcionalmente aqui,
--- a solução foi simplesmente não criá-la.
 
--- Cria uma âncora (escala 1:1, sem amplificação) numa posição de
--- mundo exata — mesma técnica usada no botão de limpar mercado.
--- Usada aqui para hospedar cada GRUPO de botões (deck ou descarte)
--- de uma corp, 2 unidades abaixo da zona correspondente.
 local function createButtonAnchor(worldPos, buttons, onReady)
     spawnObject({
         type     = "LayoutZone",
         position = worldPos,
         scale    = { 1, 1, 1 },
         callback_function = function(anchor)
-            -- IMPORTANTE: sem isso, a âncora herda o comportamento
-            -- PADRÃO de uma LayoutZone (que gerencia ativamente
-            -- objetos próximos). Como fica só 2 unidades do deck,
-            -- que é populado carta por carta durante o setup, ela
-            -- podia capturar uma carta de passagem — causando uma
-            -- carta extra suspensa, chegando tarde, depois de tudo
-            -- pronto. Desativa qualquer trigger/gerenciamento:
-            -- a âncora vira puramente um suporte de botão, inerte.
+            -- Desativa qualquer trigger/gerenciamento — a âncora é
+            -- só um suporte de botão, não deve interagir com cartas.
             anchor.LayoutZone.setOptions({
                 max_objects_per_group = 0,
                 combine_into_decks    = false,
@@ -206,7 +140,6 @@ local function createButtonAnchor(worldPos, buttons, onReady)
                 trigger_for_face_up   = false,
                 instant_refill        = false,
             })
-
             for _, btn in ipairs(buttons) do
                 anchor.createButton(btn)
             end
@@ -218,10 +151,6 @@ end
 function createDeckZone(corp, deckPos)
     local anchorPos = { deckPos.x, deckPos.y + 0.3, deckPos.z - BELOW_OFFSET }
 
-    -- Layout vertical: 2 linhas, com mais espaço entre elas.
-    -- Linha 1 (z=0): "Comprar até 5", centralizado
-    -- Linha 2 (z=-1.3): [-] [Comprar X] [+] — [-] e [+] próximos
-    -- das bordas do botão central, não mais espalhados
     createButtonAnchor(anchorPos, {
         {
             click_function = "onDraw5_" .. corp,
@@ -235,45 +164,7 @@ function createDeckZone(corp, deckPos)
             color          = { 0.086, 0.086, 0.086 },
             font_color     = { 0.8, 0.8, 0.8 },
         },
-        {
-            click_function = "onDrawMinus_" .. corp,
-            function_owner = self,
-            label          = "−",
-            position       = { -0.75, 0, -1.3 },
-            rotation       = { 0, 180, 0 },
-            width          = 500,
-            height         = 700,
-            font_size      = 350,
-            color          = { 0.6, 0.12, 0.12 },
-            font_color     = { 1, 1, 1 },
-        },
-        {
-            click_function = "onDrawMid_" .. corp,
-            function_owner = self,
-            label          = "Comprar " .. drawSettings[corp].count,
-            position       = { 0, 0, -1.3 },
-            rotation       = { 0, 180, 0 },
-            width          = 1700,
-            height         = 700,
-            font_size      = 200,
-            color          = { 0.086, 0.086, 0.086 },
-            font_color     = { 0.8, 0.8, 0.8 },
-        },
-        {
-            click_function = "onDrawPlus_" .. corp,
-            function_owner = self,
-            label          = "+",
-            position       = { 0.75, 0, -1.3 },
-            rotation       = { 0, 180, 0 },
-            width          = 500,
-            height         = 700,
-            font_size      = 350,
-            color          = { 0.12, 0.5, 0.2 },
-            font_color     = { 1, 1, 1 },
-        },
-    }, function(anchor)
-        deckAnchors[corp] = anchor
-    end)
+    })
 end
 
 function createDiscardZone(corp, discardPos)
@@ -308,31 +199,16 @@ function createDiscardZone(corp, discardPos)
     })
 end
 
--- Atualiza o texto do botão "Comprar X" depois de +/- mudar a
--- quantidade. Usa a referência da âncora guardada na criação —
--- o botão "drawMid" é sempre o 3º criado (índice 2, 0-based).
-function updateDrawLabel(corp)
-    local anchor = deckAnchors[corp]
-    if anchor == nil then return end
-    anchor.editButton({ index = 2, label = "Comprar " .. drawSettings[corp].count })
-end
-
--- ── detecção de carta nas posições de deck/descarte ─────────
+-- ── detecção de carta no deck/descarte (não na mão) ──────────
 
 local function findPileAt(worldPos)
-    -- pcall envolvendo TUDO — o erro 'owned by different scripts'
-    -- acontecia dentro do próprio Physics.cast (ou ao acessar
-    -- hit_object logo em seguida), não nas chamadas de ação que
-    -- vêm depois. Sem isso, o pcall dos chamadores nunca chegava
-    -- a rodar, porque a falha já tinha ocorrido aqui dentro.
+    -- pcall envolvendo TUDO — 'owned by different scripts' podia
+    -- acontecer dentro do próprio Physics.cast, não só nas ações
+    -- que vêm depois.
     local ok, result = pcall(function()
-        -- Caixa ampla (mesma tolerância do diagnóstico findPileWide
-        -- em solis-global.lua) — a busca estreita anterior (1x1x1,
-        -- alcance 1) perdia o deck sempre que ele assentava um pouco
-        -- fora do ponto exato depois de embaralhar/física, mesmo com
-        -- as cartas genuinamente ali. O diagnóstico usava tolerância
-        -- maior e sempre encontrava — inconsistência entre o que o
-        -- diagnóstico via e o que o jogo realmente conseguia detectar.
+        -- Caixa ampla (mesma tolerância usada no diagnóstico do
+        -- Global) — busca estreita perdia o deck quando ele
+        -- assentava um pouco fora do ponto exato após física normal.
         local hits = Physics.cast({
             origin       = { worldPos.x, worldPos.y + 3, worldPos.z },
             direction    = { 0, -1, 0 },
@@ -354,15 +230,9 @@ end
 -- ── comprar (vai para a zona de mão física) ──────────────────
 
 function drawToHandZone(corp, count, playerColor)
-    if isBusy() then
-        if playerColor then
-            broadcastToColor("Aguarde a mesa terminar de carregar/organizar antes de comprar.", playerColor, { 1, 0.8, 0.2 })
-        end
-        return
-    end
-
     local pos      = Global.call("getCorpPositions", corp)
     local handBase = pos.hand
+    local drawnSoFar = 0
 
     local function drawOne(i, retriesLeft)
         retriesLeft = retriesLeft or 3
@@ -388,18 +258,9 @@ function drawToHandZone(corp, count, playerColor)
             z = handBase.z,
         }
 
-        -- pcall: logo após um reload da mesa salva, os objetos
-        -- (inclusive cartas) podem ainda estar terminando de
-        -- inicializar internamente por um instante, mesmo depois
-        -- de 'Loading complete' aparecer — uma ação bem nesse
-        -- momento pode disparar 'owned by different scripts'.
-        -- Em vez de propagar o erro, tenta de novo automaticamente
-        -- após um pequeno delay, até 3 vezes.
-        local ok, err = pcall(function()
+        local ok = pcall(function()
             if pile.type == "Deck" then
-                -- rotation explícita: sem isso, a carta sai com a
-                -- mesma orientação do deck (verso pra cima). Face
-                -- pra cima = rotY=180 (leitura correta), rotZ=0.
+                -- rotY=180 (leitura correta), rotZ=0 (face pra cima)
                 pile.takeObject({ position = targetPos, rotation = { 0, 180, 0 }, smooth = true })
             else
                 pile.setPositionSmooth(targetPos, false, true)
@@ -407,12 +268,13 @@ function drawToHandZone(corp, count, playerColor)
             end
         end)
 
-        if not ok then
-            if retriesLeft > 0 then
-                Wait.time(function() drawOne(i, retriesLeft - 1) end, 0.5)
-            elseif playerColor then
-                broadcastToColor("A mesa ainda está organizando os objetos — tente comprar novamente em instantes.", playerColor, { 1, 0.6, 0.2 })
-            end
+        if ok then
+            drawnSoFar = drawnSoFar + 1
+            handCounts[corp] = (handCounts[corp] or 0) + 1
+        elseif retriesLeft > 0 then
+            Wait.time(function() drawOne(i, retriesLeft - 1) end, 0.5)
+        elseif playerColor then
+            broadcastToColor("A mesa ainda está organizando os objetos — tente comprar novamente em instantes.", playerColor, { 1, 0.6, 0.2 })
         end
     end
 
@@ -422,6 +284,10 @@ function drawToHandZone(corp, count, playerColor)
 end
 
 -- ── descartar mão inteira ────────────────────────────────────
+-- IMPORTANTE: player.getHandObjects() é a mão OCULTA do TTS —
+-- nosso sistema nunca usa isso, as cartas ficam numa zona física
+-- na mesa. Precisa localizar as cartas de verdade por proximidade
+-- da posição de mão, não pela API de mão do jogador.
 
 function discardHand(corp, playerColor)
     if isBusy() then
@@ -431,18 +297,37 @@ function discardHand(corp, playerColor)
         return
     end
 
-    if playerColor == nil then return end
-    local player = Player[playerColor]
-    if player == nil then return end
+    local pos     = Global.call("getCorpPositions", corp)
+    local handPos = pos.hand
 
-    local pos = Global.call("getCorpPositions", corp)
+    local cardsToDiscard = {}
+    for _, obj in ipairs(getObjects()) do
+        if obj.type == "Card" or obj.type == "Deck" then
+            local objPos = obj.getPosition()
+            local dx = objPos.x - handPos.x
+            local dz = objPos.z - handPos.z
+            if math.sqrt(dx * dx + dz * dz) < 1.5 then
+                table.insert(cardsToDiscard, obj)
+            end
+        end
+    end
+
+    if #cardsToDiscard == 0 then
+        if playerColor then
+            broadcastToColor("Sua mão já está vazia.", playerColor, { 1, 0.8, 0.2 })
+        end
+        return
+    end
+
     local ok = pcall(function()
-        for _, card in ipairs(player.getHandObjects()) do
+        for _, card in ipairs(cardsToDiscard) do
             card.setPosition(pos.discard)
         end
     end)
 
-    if not ok and playerColor then
+    if ok then
+        handCounts[corp] = 0
+    elseif playerColor then
         broadcastToColor("A mesa ainda está organizando os objetos — tente novamente em instantes.", playerColor, { 1, 0.6, 0.2 })
     end
 end
@@ -466,13 +351,9 @@ function rebuildDeck(corp, playerColor)
         return
     end
 
-    -- pcall: mesma proteção de drawToHandZone — evita propagar
-    -- 'owned by different scripts' se a mesa ainda estiver
-    -- terminando de assentar objetos logo após um reload.
     local ok = pcall(function()
         discard.setPositionSmooth(pos.deck, false, true)
-        -- rotY=180 (leitura correta), rotZ=180 (verso pra cima —
-        -- deck normal, não deve ficar com a face visível)
+        -- rotY=180 (leitura correta), rotZ=180 (verso visível)
         discard.setRotationSmooth({ 0, 180, 180 }, false, true)
     end)
 
